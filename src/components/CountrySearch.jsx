@@ -22,6 +22,7 @@ export default function CountrySearch({ onSelectCountry }) {
   const [query, setQuery] = useState('');
   const [selectedContinent, setSelectedContinent] = useState('ALL');
   const [selectedRegion, setSelectedRegion] = useState('ALL');
+  const [showFilters, setShowFilters] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const containerRef = useRef(null);
@@ -198,24 +199,14 @@ export default function CountrySearch({ onSelectCountry }) {
   return (
     <div
       ref={containerRef}
-      className="relative w-full max-w-xs sm:max-w-sm z-30 space-y-2"
+      className="relative w-64 sm:w-72 z-30 space-y-1.5 font-sans"
     >
-      {/* Search Input Field */}
-      <div className="relative flex items-center">
+      {/* Primary Compact Search Input Bar */}
+      <div className="relative flex items-center shadow-lg rounded-md bg-slate-950/90 border border-slate-800 backdrop-blur-md">
         {/* Search Icon */}
-        <div className="absolute left-3.5 pointer-events-none text-cyan-400/70 flex items-center justify-center">
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
+        <div className="absolute left-2.5 pointer-events-none text-slate-400 flex items-center justify-center">
+          <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
 
@@ -231,95 +222,106 @@ export default function CountrySearch({ onSelectCountry }) {
             setIsOpen(true);
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Search country (e.g. Pakistan, Japan)..."
-          className="w-full h-10 pl-10 pr-9 bg-slate-950/80 border border-cyan-500/30 rounded-lg text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 backdrop-blur-md shadow-lg transition-all"
+          placeholder="Search country..."
+          className="w-full h-8 pl-8 pr-14 bg-transparent text-xs text-slate-100 placeholder-slate-500 focus:outline-none"
         />
 
-        {/* Clear Button */}
-        {query && (
-          <button
-            type="button"
-            onClick={() => {
-              setQuery('');
-              if (inputRef.current) inputRef.current.focus();
-            }}
-            className="absolute right-3 p-1 text-slate-400 hover:text-cyan-300 transition-colors rounded-full hover:bg-white/10 cursor-pointer"
-            title="Clear Search Text"
-          >
-            <svg
-              className="w-3.5 h-3.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        {/* Action Controls inside Search Input Bar */}
+        <div className="absolute right-1.5 flex items-center gap-1">
+          {/* Clear Button */}
+          {query && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery('');
+                if (inputRef.current) inputRef.current.focus();
+              }}
+              className="p-1 text-slate-400 hover:text-slate-200 transition-colors rounded hover:bg-slate-800 cursor-pointer"
+              title="Clear text"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        )}
-      </div>
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
 
-      {/* Filter Controls: Continent and Region Dropdowns */}
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        {/* Continent Select */}
-        <select
-          value={selectedContinent}
-          onChange={(e) => {
-            setSelectedContinent(e.target.value);
-            setSelectedRegion('ALL');
-            setIsOpen(true);
-          }}
-          className="flex-1 h-7 px-2 bg-slate-950/80 border border-cyan-500/30 rounded text-[11px] text-cyan-300 focus:outline-none focus:border-cyan-400 backdrop-blur-md cursor-pointer hover:bg-slate-900/90 transition-colors truncate"
-          title="Filter by Continent"
-        >
-          {CONTINENT_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value} className="bg-slate-950 text-slate-200">
-              {opt.label}
-            </option>
-          ))}
-        </select>
-
-        {/* Region Select */}
-        <select
-          value={selectedRegion}
-          onChange={(e) => {
-            setSelectedRegion(e.target.value);
-            setIsOpen(true);
-          }}
-          className="flex-1 h-7 px-2 bg-slate-950/80 border border-cyan-500/30 rounded text-[11px] text-cyan-300 focus:outline-none focus:border-cyan-400 backdrop-blur-md cursor-pointer hover:bg-slate-900/90 transition-colors truncate"
-          title="Filter by Region"
-        >
-          {availableRegions.map((opt) => (
-            <option key={opt.value} value={opt.value} className="bg-slate-950 text-slate-200">
-              {opt.label}
-            </option>
-          ))}
-        </select>
-
-        {/* Reset Filters Pill */}
-        {hasActiveFilters && (
+          {/* Filter Toggle Button */}
           <button
             type="button"
-            onClick={() => {
-              setSelectedContinent('ALL');
-              setSelectedRegion('ALL');
-            }}
-            className="h-7 px-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 rounded text-[10px] font-mono text-cyan-300 cursor-pointer shrink-0 transition-colors flex items-center gap-1"
-            title="Reset Filters"
+            onClick={() => setShowFilters(!showFilters)}
+            className={`p-1 text-slate-400 hover:text-slate-200 transition-colors rounded hover:bg-slate-800 cursor-pointer relative ${
+              hasActiveFilters || showFilters ? 'text-cyan-400 bg-slate-900' : ''
+            }`}
+            title="Toggle geographic filters"
           >
-            <span>Reset</span>
-            <span className="text-[9px]">✕</span>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            {hasActiveFilters && (
+              <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-cyan-400" />
+            )}
           </button>
-        )}
+        </div>
       </div>
 
-      {/* Matching Suggestions Dropdown */}
+      {/* Collapsible Filter Bar */}
+      {showFilters && (
+        <div className="flex items-center gap-1.5 p-1.5 bg-slate-950/90 border border-slate-800 rounded-md backdrop-blur-md shadow-lg animate-in fade-in duration-150">
+          {/* Continent Select */}
+          <select
+            value={selectedContinent}
+            onChange={(e) => {
+              setSelectedContinent(e.target.value);
+              setSelectedRegion('ALL');
+              setIsOpen(true);
+            }}
+            className="flex-1 h-6 px-1.5 bg-slate-900 border border-slate-800 rounded text-[10px] text-slate-300 focus:outline-none focus:border-slate-700 cursor-pointer truncate"
+            title="Filter by Continent"
+          >
+            {CONTINENT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value} className="bg-slate-950 text-slate-200">
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          {/* Region Select */}
+          <select
+            value={selectedRegion}
+            onChange={(e) => {
+              setSelectedRegion(e.target.value);
+              setIsOpen(true);
+            }}
+            className="flex-1 h-6 px-1.5 bg-slate-900 border border-slate-800 rounded text-[10px] text-slate-300 focus:outline-none focus:border-slate-700 cursor-pointer truncate"
+            title="Filter by Region"
+          >
+            {availableRegions.map((opt) => (
+              <option key={opt.value} value={opt.value} className="bg-slate-950 text-slate-200">
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          {/* Reset Filters */}
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedContinent('ALL');
+                setSelectedRegion('ALL');
+              }}
+              className="h-6 px-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded text-[9px] font-mono text-cyan-400 cursor-pointer shrink-0 transition-colors"
+              title="Reset Filters"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Search Results Dropdown List */}
       {isOpen && (query.trim().length > 0 || hasActiveFilters) && (
-        <div className="absolute top-20 left-0 right-0 max-h-72 overflow-y-auto bg-slate-950/95 border border-cyan-500/30 rounded-lg shadow-2xl backdrop-blur-xl divide-y divide-white/5 z-50 text-xs scrollbar-thin scrollbar-thumb-cyan-500/20">
+        <div className="absolute left-0 right-0 max-h-60 overflow-y-auto bg-slate-950/95 border border-slate-800 rounded-md shadow-2xl backdrop-blur-xl divide-y divide-slate-800/60 z-50 text-xs scrollbar-thin">
           {results.length > 0 ? (
             results.map((item, idx) => {
               const isSelected = idx === activeIndex;
@@ -328,45 +330,44 @@ export default function CountrySearch({ onSelectCountry }) {
                   key={item.feature.id || item.name}
                   onClick={() => handleSelect(item)}
                   onMouseEnter={() => setActiveIndex(idx)}
-                  className={`p-2.5 sm:p-3 flex items-center justify-between cursor-pointer transition-colors ${
+                  className={`p-2 flex items-center justify-between cursor-pointer transition-colors ${
                     isSelected
-                      ? 'bg-cyan-500/20 text-cyan-200 border-l-2 border-cyan-400'
-                      : 'hover:bg-cyan-500/10 text-slate-300'
+                      ? 'bg-slate-800/80 text-white'
+                      : 'hover:bg-slate-900 text-slate-300'
                   }`}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    {/* Flag Image / Emoji */}
+                  <div className="flex items-center gap-2 min-w-0">
+                    {/* Flag */}
                     {item.details?.flagUrl ? (
                       <img
                         src={item.details.flagUrl}
                         alt=""
-                        className="w-5 h-3.5 object-cover rounded-[2px] shadow-sm shrink-0"
+                        className="w-4 h-3 object-cover rounded-[1px] shrink-0 border border-white/10"
                         loading="lazy"
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <span className="text-base leading-none shrink-0">
+                      <span className="text-xs leading-none shrink-0">
                         {item.details?.flagEmoji || '🌐'}
                       </span>
                     )}
 
-                    {/* Country Name & Subtitle */}
+                    {/* Country Name & Capital/Region */}
                     <div className="flex flex-col min-w-0">
-                      <span className="font-semibold tracking-wide truncate text-slate-100">
+                      <span className="font-medium truncate text-slate-100 text-xs">
                         {item.name}
                       </span>
-                      <span className="text-[10px] text-slate-400 truncate">
-                        {item.details?.region || item.details?.continent || 'Global'}
+                      <span className="text-[10px] text-slate-400 truncate font-sans">
                         {item.details?.capital && item.details.capital !== 'Capital City'
-                          ? ` • Capital: ${item.details.capital}`
-                          : ''}
+                          ? item.details.capital
+                          : item.details?.region || item.details?.continent || 'Global'}
                       </span>
                     </div>
                   </div>
 
-                  {/* ISO Badge */}
+                  {/* ISO Code */}
                   {item.details?.iso2 && (
-                    <span className="px-1.5 py-0.5 text-[9px] font-mono font-medium rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shrink-0 ml-2">
+                    <span className="text-[9px] font-mono text-slate-500 shrink-0 ml-2">
                       {item.details.iso2}
                     </span>
                   )}
@@ -374,8 +375,8 @@ export default function CountrySearch({ onSelectCountry }) {
               );
             })
           ) : (
-            <div className="p-4 text-center text-slate-400 text-xs">
-              No countries found
+            <div className="p-3 text-center text-slate-500 text-xs font-sans">
+              No matching countries
             </div>
           )}
         </div>

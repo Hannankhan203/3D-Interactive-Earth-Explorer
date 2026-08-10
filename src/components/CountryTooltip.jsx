@@ -84,7 +84,7 @@ export default function CountryTooltip({ hoveredCountry }) {
         top: `${top}px`,
       }}
     >
-      <div className="px-3 py-1.5 bg-slate-950/85 text-slate-100 text-xs font-medium border border-cyan-500/30 rounded-md shadow-lg shadow-black/70 backdrop-blur-md flex items-center gap-2 whitespace-nowrap">
+      <div className="px-3 py-1.5 bg-slate-950/90 text-slate-100 text-xs font-medium border border-slate-800 rounded-md shadow-xl backdrop-blur-md flex items-center gap-2 whitespace-nowrap">
         <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
         <span className="tracking-wide font-sans">{countryName}</span>
       </div>

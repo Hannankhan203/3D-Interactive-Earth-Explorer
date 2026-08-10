@@ -251,23 +251,24 @@ export default function CountryInfoPanel({ selectedFeature, onClose }) {
         height: `${size.height}px`,
         zIndex: 35,
       }}
-      className={`bg-slate-950/90 backdrop-blur-md border border-cyan-500/40 rounded-xl p-3.5 sm:p-4 shadow-2xl shadow-cyan-950/50 text-slate-200 flex flex-col relative overflow-hidden transition-all duration-200 ease-out ${
-        isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-1 pointer-events-none'
+      className={`bg-slate-950/95 backdrop-blur-md border border-slate-800 rounded-lg p-4 shadow-2xl text-slate-200 flex flex-col relative overflow-hidden transition-all duration-150 ease-out ${
+        isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
       } ${
-        isDragging || isResizing ? 'select-none shadow-[0_0_25px_rgba(6,182,212,0.3)] !transition-none' : ''
+        isDragging || isResizing ? 'select-none border-slate-700 !transition-none' : ''
       }`}
     >
-      {/* Header Handle */}
+      {/* Panel Header */}
       <div
         onPointerDown={handleHeaderPointerDown}
         onTouchStart={handleHeaderPointerDown}
-        className={`flex items-center justify-between pb-2.5 border-b border-white/10 gap-2 select-none touch-none shrink-0 ${
+        className={`flex items-start justify-between pb-3 border-b border-slate-800 gap-2 select-none touch-none shrink-0 ${
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
-        title="Click and drag to move panel"
+        title="Drag header to position window"
       >
-        <div className="flex items-center gap-2.5 overflow-hidden pointer-events-none">
-          <div className="w-9 h-6.5 rounded border border-white/20 bg-slate-900 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
+        <div className="flex items-center gap-3 overflow-hidden pointer-events-none">
+          {/* Flag */}
+          <div className="w-8 h-5.5 rounded border border-slate-800 bg-slate-900 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
             {details.flagUrl && !imgError ? (
               <img
                 src={details.flagUrl}
@@ -277,127 +278,113 @@ export default function CountryInfoPanel({ selectedFeature, onClose }) {
                 referrerPolicy="no-referrer"
               />
             ) : (
-              <span className="text-lg leading-none">{details.flagEmoji}</span>
+              <span className="text-xs leading-none">{details.flagEmoji}</span>
             )}
           </div>
 
+          {/* Title & Capital */}
           <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[9px] font-mono text-cyan-400 tracking-wider uppercase font-semibold">
-                GEOGRAPHIC DATA
-              </span>
-              <span className="text-[9px] text-slate-500 font-mono">⋮⋮ drag</span>
-            </div>
-            <h2 className="text-sm font-bold text-white tracking-wide truncate">
+            <h2 className="text-sm font-bold text-slate-100 tracking-wide truncate">
               {details.name}
             </h2>
+            <p className="text-[11px] text-slate-400 truncate">
+              {details.capital && details.capital !== 'Capital City' ? details.capital : details.continent}
+            </p>
           </div>
         </div>
 
+        {/* Close Button */}
         <button
           onPointerDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
           onClick={handleClose}
-          className="w-6.5 h-6.5 rounded-lg bg-white/5 border border-white/10 hover:bg-cyan-500/20 hover:border-cyan-400/50 hover:text-cyan-300 text-slate-400 flex items-center justify-center transition-colors cursor-pointer shrink-0 text-xs"
-          title="Close panel"
-          aria-label="Close country information panel"
+          className="p-1 text-slate-400 hover:text-slate-200 transition-colors rounded hover:bg-slate-800 cursor-pointer shrink-0 text-xs"
+          title="Close window"
+          aria-label="Close panel"
         >
           ✕
         </button>
       </div>
 
-      {/* Scrollable Body */}
-      <div className="flex-1 overflow-y-auto pr-0.5 mt-2.5 text-xs space-y-2 custom-scrollbar">
-        <div className="grid grid-cols-2 gap-2">
-          {/* Capital City */}
-          <div className="bg-cyan-950/40 border border-cyan-500/30 rounded-lg p-2 flex flex-col col-span-2 shadow-inner">
-            <div className="flex items-center justify-between">
-              <span className="text-[9px] font-mono text-cyan-400 uppercase tracking-wider font-semibold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                Capital City
-              </span>
+      {/* Structured Information List */}
+      <div className="flex-1 overflow-y-auto mt-3 pr-1 text-xs space-y-3 font-sans custom-scrollbar">
+        {/* Capital & Coordinates */}
+        {details.capital && (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+              Capital
+            </span>
+            <span className="text-slate-200 font-medium">
+              {details.capital}
               {details.capitalLat !== undefined && details.capitalLon !== undefined && details.capitalLat !== 0 && (
-                <span className="text-[9px] font-mono text-cyan-300/80 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">
-                  {Math.abs(details.capitalLat).toFixed(2)}°{details.capitalLat >= 0 ? 'N' : 'S'}, {Math.abs(details.capitalLon).toFixed(2)}°{details.capitalLon >= 0 ? 'E' : 'W'}
+                <span className="text-[10px] text-slate-400 font-mono ml-1.5">
+                  ({Math.abs(details.capitalLat).toFixed(2)}°{details.capitalLat >= 0 ? 'N' : 'S'}, {Math.abs(details.capitalLon).toFixed(2)}°{details.capitalLon >= 0 ? 'E' : 'W'})
                 </span>
               )}
-            </div>
-            <span className="font-bold text-slate-100 text-xs sm:text-sm truncate mt-0.5 tracking-wide">
-              {details.capital}
             </span>
           </div>
+        )}
 
-          {/* Continent */}
-          <div className="bg-slate-900/60 border border-white/5 rounded-lg p-2 flex flex-col min-w-0">
-            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
-              Continent
-            </span>
-            <span className="font-medium text-slate-100 truncate mt-0.5 text-[11px]" title={details.continent}>
-              {details.continent}
-            </span>
-          </div>
+        {/* Region & Continent */}
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+            Region
+          </span>
+          <span className="text-slate-200 font-medium">
+            {details.region ? `${details.region} • ${details.continent}` : details.continent}
+          </span>
+        </div>
 
-          {/* Region */}
-          <div className="bg-slate-900/60 border border-white/5 rounded-lg p-2 flex flex-col min-w-0">
-            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
-              Region
-            </span>
-            <span className="font-medium text-slate-100 truncate mt-0.5 text-[11px]" title={details.region}>
-              {details.region || 'N/A'}
-            </span>
-          </div>
+        {/* Population */}
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+            Population
+          </span>
+          <span className="text-slate-200 font-mono font-medium">
+            {details.population}
+          </span>
+        </div>
 
-          {/* Population */}
-          <div className="bg-slate-900/60 border border-white/5 rounded-lg p-2 flex flex-col min-w-0">
-            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
-              Population
-            </span>
-            <span className="font-medium text-cyan-300 font-mono truncate mt-0.5 text-[11px]">
-              {details.population}
-            </span>
-          </div>
+        {/* Area */}
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+            Area
+          </span>
+          <span className="text-slate-200 font-mono font-medium">
+            {details.area}
+          </span>
+        </div>
 
-          {/* Area */}
-          <div className="bg-slate-900/60 border border-white/5 rounded-lg p-2 flex flex-col min-w-0">
-            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
-              Area
-            </span>
-            <span className="font-medium text-slate-100 font-mono truncate mt-0.5 text-[11px]">
-              {details.area}
-            </span>
-          </div>
+        {/* Currency */}
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+            Currency
+          </span>
+          <span className="text-slate-200 font-medium">
+            {details.currency}
+          </span>
+        </div>
 
-          {/* Currency */}
-          <div className="bg-slate-900/60 border border-white/5 rounded-lg p-2 flex flex-col min-w-0">
-            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
-              Currency
-            </span>
-            <span className="font-medium text-slate-100 truncate mt-0.5 text-[11px]">
-              {details.currency}
-            </span>
-          </div>
-
-          {/* Official Language */}
-          <div className="bg-slate-900/60 border border-white/5 rounded-lg p-2 flex flex-col col-span-2 min-w-0">
-            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
-              Official Language
-            </span>
-            <span className="font-medium text-slate-100 truncate mt-0.5 text-[11px]">
-              {details.language}
-            </span>
-          </div>
+        {/* Official Language */}
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+            Official Language
+          </span>
+          <span className="text-slate-200 font-medium">
+            {details.language}
+          </span>
         </div>
       </div>
 
-      {/* Resize Handle (Bottom-Right) */}
+      {/* Resize Handle Grip */}
       <div
         onPointerDown={handleResizePointerDown}
         onTouchStart={handleResizePointerDown}
-        className="absolute bottom-0 right-0 w-6 h-6 flex items-end justify-end p-1 cursor-nwse-resize select-none touch-none text-cyan-400/50 hover:text-cyan-300 transition-colors z-20"
-        title="Drag corner to resize panel"
+        className="absolute bottom-0 right-0 w-5 h-5 flex items-end justify-end p-0.5 cursor-nwse-resize select-none touch-none text-slate-600 hover:text-slate-400 transition-colors z-20"
+        title="Drag corner to resize window"
       >
-        <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M14 14H11V12H14V14ZM14 10H8V8H14V10ZM14 6H5V4H14V6Z" opacity="0.85" />
+        <svg className="w-3 h-3" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M14 14H11V12H14V14ZM14 10H8V8H14V10ZM14 6H5V4H14V6Z" opacity="0.6" />
         </svg>
       </div>
     </div>

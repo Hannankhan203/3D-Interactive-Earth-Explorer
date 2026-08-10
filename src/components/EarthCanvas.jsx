@@ -67,7 +67,7 @@ export default function EarthCanvas({ selectedCountry, onCountrySelect, onCoordi
     const aspect = width / height;
     const initialFov = aspect < 1 ? Math.min(65, 45 / aspect) : 45;
     const camera = new THREE.PerspectiveCamera(initialFov, aspect, 0.1, 1000);
-    const initialCamPos = latLonToVector3(30.0, 69.5, 6.5);
+    const initialCamPos = latLonToVector3(30.0, 69.5, 6.0);
     camera.position.copy(initialCamPos);
 
     // 3. WebGL Renderer setup
