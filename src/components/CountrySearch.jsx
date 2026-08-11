@@ -18,7 +18,7 @@ const CONTINENT_OPTIONS = [
  * High-tech HUD Search Bar with real-time matching suggestions,
  * continent and region filters, keyboard navigation, and instant 3D Earth focusing.
  */
-export default function CountrySearch({ onSelectCountry }) {
+export default function CountrySearch({ onSelectCountry, resetTrigger = 0 }) {
   const [query, setQuery] = useState('');
   const [selectedContinent, setSelectedContinent] = useState('ALL');
   const [selectedRegion, setSelectedRegion] = useState('ALL');
@@ -27,6 +27,17 @@ export default function CountrySearch({ onSelectCountry }) {
   const [activeIndex, setActiveIndex] = useState(-1);
   const containerRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Clear query and close dropdown when reset is triggered
+  useEffect(() => {
+    if (resetTrigger > 0) {
+      setQuery('');
+      setSelectedContinent('ALL');
+      setSelectedRegion('ALL');
+      setIsOpen(false);
+      setShowFilters(false);
+    }
+  }, [resetTrigger]);
 
   // Dynamically compute available region options for the selected continent
   const availableRegions = useMemo(() => {

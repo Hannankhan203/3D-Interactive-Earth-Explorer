@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { getCountryDetails } from '../data/countryData';
+import { getNeighborFeatures } from '../utils/countryUtils';
 
 /**
  * Clean, professional, compact information panel displaying basic geographic info.
  * Styled to seamlessly integrate with the project's high-tech / sci-fi HUD theme.
  * Features stable drag-to-move header and resizable bottom-right corner.
  */
-export default function CountryInfoPanel({ selectedFeature, onClose }) {
+export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onClose }) {
   const [imgError, setImgError] = useState(false);
 
   // Explicit pixel-based positioning and sizing state
@@ -374,6 +375,46 @@ export default function CountryInfoPanel({ selectedFeature, onClose }) {
             {details.language}
           </span>
         </div>
+
+        {/* Neighboring Countries */}
+        {(() => {
+          const neighbors = getNeighborFeatures(selectedFeature);
+          return (
+            <div className="flex flex-col gap-1 pt-2 border-t border-slate-800/80">
+              <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+                Neighboring Countries ({neighbors.length})
+              </span>
+              {neighbors.length > 0 ? (
+                <div className="flex flex-wrap gap-1 mt-0.5">
+                  {neighbors.map((nFeat) => {
+                    const nDetails = getCountryDetails(nFeat);
+                    const nName = nDetails?.name || nFeat.properties?.name || 'Unknown';
+                    return (
+                      <button
+                        key={nName}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onSelectCountry) {
+                            onSelectCountry(nFeat);
+                          }
+                        }}
+                        className="px-1.5 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded text-[11px] text-sky-200/90 hover:text-sky-100 font-medium cursor-pointer transition-colors"
+                        title={`Select ${nName}`}
+                      >
+                        {nName}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <span className="text-slate-400 text-[11px] italic">
+                  None (Island or isolated territory)
+                </span>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Resize Handle Grip */}

@@ -18,13 +18,16 @@ import {
   latLonToVector3,
   getFeatureCenter,
   getRealtimeSunVector,
+  getNeighborFeatures,
 } from '../utils/countryUtils';
 import { getCountryDetails } from '../data/countryData';
 
 function isSameFeature(f1, f2) {
   if (f1 === f2) return true;
   if (!f1 || !f2) return false;
-  if (f1.id && f2.id) return f1.id === f2.id;
+  if (f1.id !== undefined && f1.id !== null && f2.id !== undefined && f2.id !== null) {
+    return String(f1.id) === String(f2.id);
+  }
   if (f1.properties?.name && f2.properties?.name) return f1.properties.name === f2.properties.name;
   return false;
 }
@@ -39,6 +42,9 @@ export default function EarthCanvas({
   onCoordinatesUpdate,
   onCountryHover,
   simulatedTime = null,
+  resetTrigger = 0,
+  zoomInTrigger = 0,
+  zoomOutTrigger = 0,
 }) {
   const containerRef = useRef(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -47,6 +53,9 @@ export default function EarthCanvas({
   const selectCountryFeatureRef = useRef(null);
   const clearSelectionRef = useRef(null);
   const rotateToFeatureRef = useRef(null);
+  const resetToInitialViewRef = useRef(null);
+  const zoomInRef = useRef(null);
+  const zoomOutRef = useRef(null);
   const selectedCountryRef = useRef(selectedCountry);
   const onCountryHoverRef = useRef(onCountryHover);
   const simulatedTimeRef = useRef(simulatedTime);
@@ -342,6 +351,7 @@ export default function EarthCanvas({
     // 10. Country & Capital Click/Tap Selection Raycasting System
     const raycaster = new THREE.Raycaster();
     let currentHighlightGroup = null;
+    let neighborHighlightGroups = [];
     let selectedLocationMarker = null;
     let activeHoverGroups = [];
     let currentHoveredFeature = null;
@@ -361,11 +371,11 @@ export default function EarthCanvas({
       markerGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
 
       // 1. Outer subtle glowing aura ring
-      const auraGeom = new THREE.RingGeometry(0.032, 0.048, 32);
+      const auraGeom = new THREE.RingGeometry(0.024, 0.036, 32);
       const auraMat = new THREE.MeshBasicMaterial({
-        color: 0xf59e0b, // Warm gold
+        color: 0x38bdf8, // Refined sky-blue geographic accent
         transparent: true,
-        opacity: 0.35,
+        opacity: 0.22,
         side: THREE.DoubleSide,
         depthTest: true,
         depthWrite: false,
@@ -373,11 +383,11 @@ export default function EarthCanvas({
       const auraMesh = new THREE.Mesh(auraGeom, auraMat);
 
       // 2. Precision inner target ring
-      const ringGeom = new THREE.RingGeometry(0.016, 0.026, 32);
+      const ringGeom = new THREE.RingGeometry(0.012, 0.020, 32);
       const ringMat = new THREE.MeshBasicMaterial({
-        color: 0xf59e0b,
+        color: 0x38bdf8,
         transparent: true,
-        opacity: 0.85,
+        opacity: 0.80,
         side: THREE.DoubleSide,
         depthTest: true,
         depthWrite: false,
@@ -385,9 +395,9 @@ export default function EarthCanvas({
       const ringMesh = new THREE.Mesh(ringGeom, ringMat);
 
       // 3. Center bright luminous dot
-      const dotGeom = new THREE.CircleGeometry(0.010, 16);
+      const dotGeom = new THREE.CircleGeometry(0.007, 16);
       const dotMat = new THREE.MeshBasicMaterial({
-        color: 0xfffbeb, // Luminous ivory white-gold
+        color: 0xf8fafc, // Crisp slate-50 white dot
         transparent: true,
         opacity: 0.95,
         side: THREE.DoubleSide,
@@ -398,29 +408,29 @@ export default function EarthCanvas({
 
       // 4. Subtle cardinal crosshair tick marks
       const crosshairGroup = new THREE.Group();
-      const tickGeom = new THREE.PlaneGeometry(0.003, 0.012);
+      const tickGeom = new THREE.PlaneGeometry(0.002, 0.008);
       const tickMat = new THREE.MeshBasicMaterial({
-        color: 0xfbbf24,
+        color: 0x7dd3fc,
         transparent: true,
-        opacity: 0.8,
+        opacity: 0.7,
         side: THREE.DoubleSide,
         depthTest: true,
         depthWrite: false,
       });
 
       const tickN = new THREE.Mesh(tickGeom, tickMat);
-      tickN.position.set(0, 0.038, 0);
+      tickN.position.set(0, 0.028, 0);
 
       const tickS = new THREE.Mesh(tickGeom, tickMat);
-      tickS.position.set(0, -0.038, 0);
+      tickS.position.set(0, -0.028, 0);
 
       const tickE = new THREE.Mesh(tickGeom, tickMat);
       tickE.rotation.z = Math.PI / 2;
-      tickE.position.set(0.038, 0, 0);
+      tickE.position.set(0.028, 0, 0);
 
       const tickW = new THREE.Mesh(tickGeom, tickMat);
       tickW.rotation.z = Math.PI / 2;
-      tickW.position.set(-0.038, 0, 0);
+      tickW.position.set(-0.028, 0, 0);
 
       crosshairGroup.add(tickN, tickS, tickE, tickW);
 
@@ -446,6 +456,17 @@ export default function EarthCanvas({
           if (child.material) child.material.dispose();
         });
         currentHighlightGroup = null;
+      }
+
+      if (neighborHighlightGroups.length > 0) {
+        neighborHighlightGroups.forEach((group) => {
+          earthMesh.remove(group);
+          group.traverse((child) => {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+          });
+        });
+        neighborHighlightGroups = [];
       }
 
       if (selectedLocationMarker) {
@@ -495,7 +516,7 @@ export default function EarthCanvas({
 
       // Create new translucent hover highlight with starting opacity 0 for smooth fade-in
       const hoverGroup = createCountryHighlightGroup(feature, 2.0, {
-        lineColor: 0x60a5fa,
+        lineColor: 0x93c5fd,
         lineOpacity: 0.0,
         fillColor: 0x38bdf8,
         fillOpacity: 0.0,
@@ -507,8 +528,8 @@ export default function EarthCanvas({
       activeHoverGroups.push({
         group: hoverGroup,
         feature: feature,
-        targetLineOpacity: 0.65,
-        targetFillOpacity: 0.18,
+        targetLineOpacity: 0.52,
+        targetFillOpacity: 0.12,
         currentLineOpacity: 0.0,
         currentFillOpacity: 0.0,
         isFadingOut: false,
@@ -527,6 +548,20 @@ export default function EarthCanvas({
       const highlightGroup = createCountryHighlightGroup(feature, 2.0);
       earthMesh.add(highlightGroup);
       currentHighlightGroup = highlightGroup;
+
+      // Subtle secondary emphasis for neighboring countries
+      const neighborFeatures = getNeighborFeatures(feature);
+      neighborHighlightGroups = neighborFeatures.map((nFeat) => {
+        const nGroup = createCountryHighlightGroup(nFeat, 2.0, {
+          lineColor: 0x38bdf8,
+          lineOpacity: 0.35,
+          fillColor: 0x0284c7,
+          fillOpacity: 0.06,
+          groupName: 'NeighborHighlight',
+        });
+        earthMesh.add(nGroup);
+        return nGroup;
+      });
 
       const marker = createSelectedLocationMarker(feature);
       if (marker) {
@@ -556,7 +591,7 @@ export default function EarthCanvas({
             if (marker.userData?.coreMesh) {
               marker.userData.coreMesh.material.color.setHex(0x38bdf8);
             }
-            marker.scale.set(1.6, 1.6, 1.6);
+            marker.scale.set(1.2, 1.2, 1.2);
           } else {
             marker.visible = false;
           }
@@ -573,6 +608,12 @@ export default function EarthCanvas({
         navAnimId = null;
       }
       inertiaVel = { x: 0, y: 0 };
+      dragSamples = [];
+      isPointerDown = false;
+      if (controls) {
+        if (controls._sphericalDelta) controls._sphericalDelta.set(0, 0, 0);
+        if (controls._panOffset) controls._panOffset.set(0, 0, 0);
+      }
     };
 
     // Immediately interrupt automatic camera navigation if the user drags, scrolls, or zooms
@@ -582,6 +623,10 @@ export default function EarthCanvas({
       if (!feature) return;
 
       cancelNavAnimation();
+      if (controls) {
+        if (controls._sphericalDelta) controls._sphericalDelta.set(0, 0, 0);
+        if (controls._panOffset) controls._panOffset.set(0, 0, 0);
+      }
 
       const details = getCountryDetails(feature);
       let targetLat = details?.capitalLat;
@@ -616,6 +661,12 @@ export default function EarthCanvas({
       const startTime = performance.now();
 
       const animateCameraStep = () => {
+        inertiaVel = { x: 0, y: 0 };
+        if (controls) {
+          if (controls._sphericalDelta) controls._sphericalDelta.set(0, 0, 0);
+          if (controls._panOffset) controls._panOffset.set(0, 0, 0);
+        }
+
         const elapsed = performance.now() - startTime;
         const progress = Math.min(1.0, elapsed / duration);
 
@@ -635,6 +686,11 @@ export default function EarthCanvas({
           navAnimId = requestAnimationFrame(animateCameraStep);
         } else {
           navAnimId = null;
+          inertiaVel = { x: 0, y: 0 };
+          if (controls) {
+            if (controls._sphericalDelta) controls._sphericalDelta.set(0, 0, 0);
+            if (controls._panOffset) controls._panOffset.set(0, 0, 0);
+          }
           if (lastPointerPosRef.current) {
             updateHoverState(lastPointerPosRef.current.x, lastPointerPosRef.current.y);
           }
@@ -644,6 +700,131 @@ export default function EarthCanvas({
       navAnimId = requestAnimationFrame(animateCameraStep);
     };
     rotateToFeatureRef.current = rotateToFeature;
+
+    const resetToInitialView = () => {
+      cancelNavAnimation();
+      clearSelection();
+      clearHoverHighlight();
+      setCapitalLabel({ visible: false, x: 0, y: 0, capitalName: '', countryName: '' });
+
+      // Ensure active drag state and rotation velocity are completely wiped
+      isPointerDown = false;
+      dragSamples = [];
+      inertiaVel = { x: 0, y: 0 };
+      if (controls) {
+        if (controls._sphericalDelta) controls._sphericalDelta.set(0, 0, 0);
+        if (controls._panOffset) controls._panOffset.set(0, 0, 0);
+      }
+
+      const startPos = camera.position.clone();
+      const startDist = startPos.length();
+      const startNorm = startPos.clone().normalize();
+
+      // Return to initial camera orientation centered on Pakistan (30.0° N, 69.5° E)
+      const targetLat = 30.0;
+      const targetLon = 69.5;
+      const targetDist = 6.0;
+
+      const targetUnitVecLocal = latLonToVector3(targetLat, targetLon, 1.0).normalize();
+      const targetUnitVec = targetUnitVecLocal.clone().applyEuler(earthMesh.rotation).normalize();
+
+      const startQ = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), startNorm);
+      const targetQ = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), targetUnitVec);
+
+      const duration = 700;
+      const startTime = performance.now();
+
+      const animateCameraStep = () => {
+        // Zero out rotation momentum on every step of reset transition
+        inertiaVel = { x: 0, y: 0 };
+        if (controls) {
+          if (controls._sphericalDelta) controls._sphericalDelta.set(0, 0, 0);
+          if (controls._panOffset) controls._panOffset.set(0, 0, 0);
+        }
+
+        const elapsed = performance.now() - startTime;
+        const progress = Math.min(1.0, elapsed / duration);
+
+        const ease = progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+        const currentQ = new THREE.Quaternion().slerpQuaternions(startQ, targetQ, ease);
+        const currentDir = new THREE.Vector3(0, 0, 1).applyQuaternion(currentQ);
+        const currentDist = THREE.MathUtils.lerp(startDist, targetDist, ease);
+
+        camera.position.copy(currentDir).multiplyScalar(currentDist);
+        controls.update();
+
+        if (progress < 1.0) {
+          navAnimId = requestAnimationFrame(animateCameraStep);
+        } else {
+          navAnimId = null;
+          // Final safety wipe of momentum variables upon arrival
+          inertiaVel = { x: 0, y: 0 };
+          if (controls) {
+            if (controls._sphericalDelta) controls._sphericalDelta.set(0, 0, 0);
+            if (controls._panOffset) controls._panOffset.set(0, 0, 0);
+          }
+          if (lastPointerPosRef.current) {
+            updateHoverState(lastPointerPosRef.current.x, lastPointerPosRef.current.y);
+          }
+        }
+      };
+
+      navAnimId = requestAnimationFrame(animateCameraStep);
+    };
+    resetToInitialViewRef.current = resetToInitialView;
+
+    const zoomIn = () => {
+      cancelNavAnimation();
+      const currentDist = camera.position.length();
+      const targetDist = Math.max(2.4, currentDist * 0.75);
+      const startDist = currentDist;
+      const duration = 200;
+      const startTime = performance.now();
+
+      const animateZoom = () => {
+        const elapsed = performance.now() - startTime;
+        const progress = Math.min(1.0, elapsed / duration);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const d = THREE.MathUtils.lerp(startDist, targetDist, ease);
+        camera.position.setLength(d);
+        controls.update();
+        if (progress < 1.0) {
+          navAnimId = requestAnimationFrame(animateZoom);
+        } else {
+          navAnimId = null;
+        }
+      };
+      navAnimId = requestAnimationFrame(animateZoom);
+    };
+    zoomInRef.current = zoomIn;
+
+    const zoomOut = () => {
+      cancelNavAnimation();
+      const currentDist = camera.position.length();
+      const targetDist = Math.min(12.0, currentDist * 1.35);
+      const startDist = currentDist;
+      const duration = 200;
+      const startTime = performance.now();
+
+      const animateZoom = () => {
+        const elapsed = performance.now() - startTime;
+        const progress = Math.min(1.0, elapsed / duration);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const d = THREE.MathUtils.lerp(startDist, targetDist, ease);
+        camera.position.setLength(d);
+        controls.update();
+        if (progress < 1.0) {
+          navAnimId = requestAnimationFrame(animateZoom);
+        } else {
+          navAnimId = null;
+        }
+      };
+      navAnimId = requestAnimationFrame(animateZoom);
+    };
+    zoomOutRef.current = zoomOut;
 
     const lastPointerPosRef = { current: null };
 
@@ -1099,6 +1280,7 @@ export default function EarthCanvas({
 
   // Sync selectedCountry from external props (e.g., search bar or panel close button)
   useEffect(() => {
+    selectedCountryRef.current = selectedCountry;
     if (!selectedCountry) {
       if (clearSelectionRef.current) clearSelectionRef.current();
     } else {
@@ -1110,6 +1292,35 @@ export default function EarthCanvas({
       }
     }
   }, [selectedCountry]);
+
+  useEffect(() => {
+    onCountryHoverRef.current = onCountryHover;
+  }, [onCountryHover]);
+
+  useEffect(() => {
+    simulatedTimeRef.current = simulatedTime;
+  }, [simulatedTime]);
+
+  // Handle explicit reset trigger to return to initial Pakistan orientation
+  useEffect(() => {
+    if (resetTrigger > 0 && resetToInitialViewRef.current) {
+      resetToInitialViewRef.current();
+    }
+  }, [resetTrigger]);
+
+  // Handle explicit zoom in trigger
+  useEffect(() => {
+    if (zoomInTrigger > 0 && zoomInRef.current) {
+      zoomInRef.current();
+    }
+  }, [zoomInTrigger]);
+
+  // Handle explicit zoom out trigger
+  useEffect(() => {
+    if (zoomOutTrigger > 0 && zoomOutRef.current) {
+      zoomOutRef.current();
+    }
+  }, [zoomOutTrigger]);
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-slate-950">

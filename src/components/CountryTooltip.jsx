@@ -51,6 +51,12 @@ export default function CountryTooltip({ hoveredCountry }) {
 
   const details = getCountryDetails(displayCountry);
   const countryName = details?.name || displayCountry.properties?.name || 'Unknown Territory';
+  const capitalName =
+    details?.capital &&
+    details.capital !== 'Capital City' &&
+    details.capital !== 'No officially designated capital'
+      ? details.capital
+      : null;
 
   // Offset tooltip slightly from cursor (14px right, 14px down)
   const offset = 14;
@@ -85,8 +91,13 @@ export default function CountryTooltip({ hoveredCountry }) {
       }}
     >
       <div className="px-3 py-1.5 bg-slate-950/90 text-slate-100 text-xs font-medium border border-slate-800 rounded-md shadow-xl backdrop-blur-md flex items-center gap-2 whitespace-nowrap">
-        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+        <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
         <span className="tracking-wide font-sans">{countryName}</span>
+        {capitalName && (
+          <span className="text-slate-400 text-[11px] font-normal font-sans border-l border-slate-800/80 pl-2 ml-0.5">
+            Capital: <span className="text-sky-200/90 font-medium">{capitalName}</span>
+          </span>
+        )}
       </div>
     </div>
   );

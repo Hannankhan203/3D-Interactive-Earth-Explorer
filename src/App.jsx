@@ -3,7 +3,8 @@ import EarthCanvas from './components/EarthCanvas';
 import CountryInfoPanel from './components/CountryInfoPanel';
 import CountrySearch from './components/CountrySearch';
 import CountryTooltip from './components/CountryTooltip';
-import DevTimeControls from './components/DevTimeControls';
+import TimeSimulationControls from './components/TimeSimulationControls';
+import NavControls from './components/NavControls';
 
 /**
  * Main Application Component
@@ -16,6 +17,26 @@ export default function App() {
   const [coords, setCoords] = useState({ lat: 30.0, lon: 69.5 });
   const [showHint, setShowHint] = useState(true);
   const [simulatedTime, setSimulatedTime] = useState(null);
+  const [resetTrigger, setResetTrigger] = useState(0);
+  const [zoomInTrigger, setZoomInTrigger] = useState(0);
+  const [zoomOutTrigger, setZoomOutTrigger] = useState(0);
+
+  const handleResetGlobe = () => {
+    setSelectedCountry(null);
+    setResetTrigger((prev) => prev + 1);
+  };
+
+  const handleZoomIn = () => {
+    setZoomInTrigger((prev) => prev + 1);
+  };
+
+  const handleZoomOut = () => {
+    setZoomOutTrigger((prev) => prev + 1);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedCountry(null);
+  };
 
   // Smoothly fade out interaction hint after 4s or on user interaction
   useEffect(() => {
@@ -49,11 +70,23 @@ export default function App() {
           onCountryHover={setHoveredCountry}
           onCoordinatesUpdate={setCoords}
           simulatedTime={simulatedTime}
+          resetTrigger={resetTrigger}
+          zoomInTrigger={zoomInTrigger}
+          zoomOutTrigger={zoomOutTrigger}
         />
       </div>
 
-      {/* Developer-only Time Simulation Test Controls */}
-      <DevTimeControls
+      {/* Minimal Geographic Navigation Controls */}
+      <NavControls
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onResetView={handleResetGlobe}
+        onClearSelection={handleClearSelection}
+        hasSelection={Boolean(selectedCountry)}
+      />
+
+      {/* Permanent User-Facing Time Simulation Controls */}
+      <TimeSimulationControls
         simulatedTime={simulatedTime}
         onSimulateTime={setSimulatedTime}
       />
@@ -61,22 +94,38 @@ export default function App() {
       {/* Top Left Floating Identity & Search Overlay */}
       <div className="absolute top-4 left-4 z-30 max-w-[calc(100vw-32px)]">
         <div className="flex flex-col gap-2">
-          {/* Understated Identity Label */}
-          <div className="flex items-center gap-2 pl-0.5 pointer-events-none">
-            <span className="w-1 h-1 rounded-full bg-cyan-400/80 shrink-0" />
-            <span className="text-[11px] font-semibold tracking-wider text-slate-300 uppercase font-sans">
-              Earth Explorer
-            </span>
+          {/* Understated Identity Label & Unobtrusive Reset Control */}
+          <div className="flex items-center justify-between pl-0.5 gap-3">
+            <div className="flex items-center gap-2 pointer-events-none">
+              <span className="w-1 h-1 rounded-full bg-cyan-400/80 shrink-0" />
+              <span className="text-[11px] font-semibold tracking-wider text-slate-300 uppercase font-sans">
+                Earth Explorer
+              </span>
+            </div>
+
+            {/* Reset / Clear Control */}
+            <button
+              type="button"
+              onClick={handleResetGlobe}
+              className="flex items-center gap-1 px-2 py-0.5 bg-slate-950/80 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded text-[10px] font-medium text-slate-400 hover:text-slate-200 transition-colors cursor-pointer backdrop-blur-md shadow-sm"
+              title="Reset view and clear selection"
+            >
+              <svg className="w-3 h-3 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Reset View</span>
+            </button>
           </div>
 
           {/* Compact Geographic Search Interface */}
-          <CountrySearch onSelectCountry={setSelectedCountry} />
+          <CountrySearch onSelectCountry={setSelectedCountry} resetTrigger={resetTrigger} />
         </div>
       </div>
 
       {/* Contextual Country Information Panel */}
       <CountryInfoPanel
         selectedFeature={selectedCountry}
+        onSelectCountry={setSelectedCountry}
         onClose={() => setSelectedCountry(null)}
       />
 

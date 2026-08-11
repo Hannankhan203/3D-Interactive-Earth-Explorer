@@ -12515,6 +12515,15 @@ export const COUNTRY_DATA = {
   }
 };
 
+// Register Palestine record under all relevant identifiers (ISO, numeric, name)
+COUNTRY_DATA["275"] = PALESTINE_RECORD;
+COUNTRY_DATA["376"] = PALESTINE_RECORD;
+COUNTRY_DATA["Palestine"] = PALESTINE_RECORD;
+COUNTRY_DATA["State of Palestine"] = PALESTINE_RECORD;
+COUNTRY_DATA["PS"] = PALESTINE_RECORD;
+COUNTRY_DATA["PSE"] = PALESTINE_RECORD;
+COUNTRY_DATA["ISR"] = PALESTINE_RECORD;
+
 /**
  * Standard Geographic Region Mapping based on ISO 3166-1 alpha-3 codes.
  */

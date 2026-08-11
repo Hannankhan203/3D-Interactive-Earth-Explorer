@@ -27,6 +27,27 @@ if (idx376 !== -1 && idx275 !== -1) {
 const worldGeoJSON = topojson.feature(worldTopology, worldTopology.objects.countries);
 export const countryFeatures = worldGeoJSON.features;
 
+// Pre-calculate neighbor indices map using TopoJSON topology
+const neighborIndicesMap = topojson.neighbors(worldTopology.objects.countries.geometries);
+
+/**
+ * Returns the array of neighboring GeoJSON features for a given country feature.
+ * @param {Object} targetFeature - GeoJSON feature
+ * @returns {Array<Object>}
+ */
+export function getNeighborFeatures(targetFeature) {
+  if (!targetFeature) return [];
+  const idx = countryFeatures.findIndex((f) => {
+    if (f === targetFeature) return true;
+    if (f.id && targetFeature.id) return String(f.id) === String(targetFeature.id);
+    if (f.properties?.name && targetFeature.properties?.name) return f.properties.name === targetFeature.properties.name;
+    return false;
+  });
+  if (idx === -1) return [];
+  const neighborIndices = neighborIndicesMap[idx] || [];
+  return neighborIndices.map((i) => countryFeatures[i]).filter(Boolean);
+}
+
 /**
  * Converts latitude and longitude to 3D Cartesian coordinates matching Three.js SphereGeometry mapping.
  * @param {number} lat - Latitude in degrees (-90 to 90)
@@ -216,7 +237,7 @@ export function getFeatureCenter(feature) {
  * @returns {THREE.LineSegments}
  */
 export function createCountryBoundaries(earthRadius = 2.0) {
-  const lineRadius = earthRadius * 1.0015; // Slightly above surface to prevent z-fighting
+  const lineRadius = earthRadius * 1.0012; // Hugs Earth surface closely without z-fighting
   const mesh = topojson.mesh(worldTopology, worldTopology.objects.countries);
 
   const positions = [];
@@ -247,9 +268,9 @@ export function createCountryBoundaries(earthRadius = 2.0) {
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
 
   const material = new THREE.LineBasicMaterial({
-    color: 0xd0e8ff,
+    color: 0xbfdbfe, // Soft ice-blue neutral boundary line
     transparent: true,
-    opacity: 0.38,
+    opacity: 0.28,   // Subtle, thin professional boundary opacity
     depthTest: true,
     depthWrite: false,
   });
@@ -270,17 +291,17 @@ export function createCountryBoundaries(earthRadius = 2.0) {
 export function createCountryHighlightGroup(countryFeature, earthRadius = 2.0, options = {}) {
   const {
     lineColor = 0x38bdf8,
-    lineOpacity = 0.95,
+    lineOpacity = 0.80,
     fillColor = 0x0284c7,
-    fillOpacity = 0.32,
+    fillOpacity = 0.22,
     groupName = 'CountryHighlight',
   } = options;
 
   const group = new THREE.Group();
   group.name = groupName;
 
-  const outlineRadius = earthRadius * 1.003;
-  const fillRadius = earthRadius * 1.0022;
+  const outlineRadius = earthRadius * 1.0022;
+  const fillRadius = earthRadius * 1.0018;
 
   const linePositions = [];
   const surfacePositions = [];
