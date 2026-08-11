@@ -392,16 +392,17 @@ export function createProceduralCloudTexture() {
 }
 
 /**
- * Creates a realistic, subtle blue atmospheric glow shader layer surrounding Earth.
- * Uses a Fresnel limb-scattering shader on a BackSide sphere shell to project
- * a natural Rayleigh-scattering atmosphere halo into space.
+ * Creates a photographic, highly realistic thin atmospheric scattering layer surrounding Earth.
+ * Features Rayleigh blue scattering on the day side, forward sunlight scattering highlights,
+ * sunset/twilight warm tone shifts near the terminator, and a subtle dark navy rim on the night side.
  *
- * @param {number} earthRadius - Radius of the Earth sphere mesh (default: 2.0)
+ * @param {number} earthRadius - Radius of the Earth sphere (default 2.0)
+ * @param {THREE.Vector3} sunDirection - Unit vector pointing to the subsolar point
  * @returns {{ geometry: THREE.SphereGeometry, material: THREE.ShaderMaterial, mesh: THREE.Mesh }}
  */
-export function createAtmosphereGlow(earthRadius = 2.0, sunDirection = new THREE.Vector3(5, 3, 5).normalize()) {
-  // Thin atmospheric gas shell surrounding Earth (~3% outer radius, e.g. 2.06 for 2.0 radius Earth)
-  const atmosphereRadius = earthRadius * 1.03;
+export function createAtmosphereGlow(earthRadius = 2.0, sunDirection = new THREE.Vector3(1, 0, 0)) {
+  // Thin atmospheric gas shell (~2.5% outer radius)
+  const atmosphereRadius = earthRadius * 1.025;
   const geometry = new THREE.SphereGeometry(atmosphereRadius, 64, 64);
 
   const material = new THREE.ShaderMaterial({
@@ -428,26 +429,46 @@ export function createAtmosphereGlow(earthRadius = 2.0, sunDirection = new THREE
       uniform vec3 uSunDirection;
 
       void main() {
-        // Fresnel limb-scattering angle calculation
         vec3 viewDir = normalize(vViewPosition);
         vec3 norm = normalize(vNormal);
-
-        // 0 at center of Earth disk, 1 at the outer horizon silhouette limb
-        float dotVN = dot(norm, viewDir);
-        float rim = pow(max(0.0, 1.0 - abs(dotVN)), 3.2);
-
-        // Sunlight scattering modulation: full brightness on day side, fading smoothly at terminator
         vec3 worldNorm = normalize(vWorldNormal);
-        float sunDot = dot(worldNorm, normalize(uSunDirection));
-        float sunFactor = smoothstep(-0.2, 0.25, sunDot);
+        vec3 sunDir = normalize(uSunDirection);
 
-        // Natural Rayleigh scattering sky blue tone
-        vec3 atmosphereColor = vec3(0.28, 0.65, 0.98);
+        // 1. Fresnel limb scattering: concentrates atmosphere tightly along Earth's horizon edge
+        float dotVN = abs(dot(norm, viewDir));
+        float rim = pow(max(0.0, 1.0 - dotVN), 4.2);
 
-        // Soft, delicate alpha falloff
-        float alpha = rim * sunFactor * 0.75;
+        // 2. Sunlight orientation factor
+        float sunDot = dot(worldNorm, sunDir);
 
-        gl_FragColor = vec4(atmosphereColor * sunFactor, alpha);
+        // Smooth transition from full daylight to night terminator
+        float dayFactor = smoothstep(-0.25, 0.25, sunDot);
+
+        // 3. Sunset / Twilight glow transition near the day-night terminator (sunDot ~ 0.0)
+        float twilightFactor = smoothstep(0.3, 0.0, abs(sunDot));
+
+        // 4. Forward Mie/Rayleigh scattering: subtle bright highlight when viewing limb towards the Sun
+        float forwardScatter = pow(max(0.0, dot(-viewDir, sunDir)), 3.0) * dayFactor * 0.35;
+
+        // 5. Color Palettes:
+        // Day sky blue (Rayleigh scattering)
+        vec3 dayColor = vec3(0.20, 0.58, 0.95);
+        // Twilight sunset warm amber-copper tone
+        vec3 twilightColor = vec3(0.85, 0.45, 0.22);
+        // Night side faint deep indigo/navy rim
+        vec3 nightColor = vec3(0.02, 0.06, 0.16);
+
+        // Combine colors naturally according to sun position
+        vec3 atmosColor = mix(nightColor, dayColor, dayFactor);
+        atmosColor = mix(atmosColor, twilightColor, twilightFactor * 0.35);
+        atmosColor += vec3(0.4, 0.7, 1.0) * forwardScatter;
+
+        // 6. Alpha density falloff: delicate and thin
+        float alphaDay = rim * (0.65 + forwardScatter);
+        float alphaNight = rim * 0.08; // Very subtle on night side
+        float alpha = mix(alphaNight, alphaDay, dayFactor);
+
+        gl_FragColor = vec4(atmosColor, alpha);
       }
     `,
     blending: THREE.AdditiveBlending,
@@ -458,7 +479,7 @@ export function createAtmosphereGlow(earthRadius = 2.0, sunDirection = new THREE
 
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = 'atmosphereMesh';
-  mesh.raycast = () => {}; // Exclude atmosphere from raycasting interactions
+  mesh.raycast = () => {}; // Exclude atmosphere from raycasting
   return { geometry, material, mesh };
 }
 

@@ -75,11 +75,15 @@ export default function EarthCanvas({
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x01040f); // Dark outer-space background
 
+    // Earth's physical axial tilt (23.44 degrees obliquity)
+    const AXIAL_TILT_RAD = THREE.MathUtils.degToRad(-23.44);
+    const tiltEuler = new THREE.Euler(0, 0, AXIAL_TILT_RAD);
+
     // 2. Perspective Camera setup with responsive FOV adaptation
     const aspect = width / height;
     const initialFov = aspect < 1 ? Math.min(65, 45 / aspect) : 45;
     const camera = new THREE.PerspectiveCamera(initialFov, aspect, 0.1, 1000);
-    const initialCamPos = latLonToVector3(30.0, 69.5, 6.0);
+    const initialCamPos = latLonToVector3(30.0, 69.5, 6.0).applyEuler(tiltEuler);
     camera.position.copy(initialCamPos);
 
     // 3. WebGL Renderer setup
@@ -100,12 +104,12 @@ export default function EarthCanvas({
     // 4. OrbitControls for interactive 3D navigation and silky-smooth mouse-wheel zoom
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.04; // Smooth physical inertia for drag and zoom
+    controls.dampingFactor = 0.05; // Smooth physical inertia for drag and zoom
     controls.rotateSpeed = 0.75;
     controls.enableZoom = true;
-    controls.zoomSpeed = 0.7; // Controlled, fluid zoom feel
-    controls.minDistance = 2.8; // Prevents clipping into Earth sphere (radius 2.0)
-    controls.maxDistance = 15; // Prevents Earth from zooming too far out
+    controls.zoomSpeed = 0.65; // Controlled, fluid zoom feel
+    controls.minDistance = 2.4; // Prevents clipping into Earth sphere (radius 2.0, atmosphere 2.08)
+    controls.maxDistance = 12.0; // Prevents Earth from zooming too far out
     controls.enablePan = false; // Keep Earth strictly centered in viewport
     controls.mouseButtons = {
       LEFT: THREE.MOUSE.ROTATE,
@@ -207,20 +211,25 @@ export default function EarthCanvas({
         float sunDot = dot(normalize(vWorldNormal), normalize(uSunDirection));
         
         // City lights activate smoothly as the surface rotates into darkness
-        float nightFactor = smoothstep(0.05, -0.15, sunDot);
+        float nightFactor = smoothstep(0.06, -0.14, sunDot);
         
         // Sample city lights map
         vec4 nightLightsTex = texture2D(uNightLightsMap, vUvCoord);
         
         // Warm golden-amber illumination boost for realistic urban glow
-        vec3 cityLightColor = nightLightsTex.rgb * vec3(1.2, 1.0, 0.75);
+        vec3 cityLightColor = nightLightsTex.rgb * vec3(1.22, 1.0, 0.72);
         
-        totalEmissiveRadiance += cityLightColor * nightFactor * 1.5;
+        // Faint deep indigo night-side ambient shade so geographic detail remains faintly visible
+        float nightShade = smoothstep(0.08, -0.25, sunDot);
+        vec3 nightAmbientFill = vec3(0.018, 0.028, 0.052) * nightShade;
+        
+        totalEmissiveRadiance += cityLightColor * nightFactor * 1.5 + nightAmbientFill;
         `
       );
     };
 
     const earthMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    earthMesh.rotation.z = AXIAL_TILT_RAD;
     scene.add(earthMesh);
 
     // 7b. Capital City Markers Layer (attached directly to Earth sphere so markers rotate seamlessly with Earth)
@@ -229,7 +238,7 @@ export default function EarthCanvas({
 
     // 7c. Geographic Country Boundaries Layer (follows curvature of Earth at radius ~2.003)
     const countryBoundaries = createCountryBoundaries(2.0);
-    scene.add(countryBoundaries);
+    earthMesh.add(countryBoundaries);
 
     // 8. Realistic Cloud Sphere Layer (radius 2.015, slightly above Earth surface)
     const cloudGeometry = new THREE.SphereGeometry(2.015, 64, 64);
@@ -563,9 +572,10 @@ export default function EarthCanvas({
         cancelAnimationFrame(navAnimId);
         navAnimId = null;
       }
+      inertiaVel = { x: 0, y: 0 };
     };
 
-    // Immediately interrupt automatic camera navigation if the user drags or zooms
+    // Immediately interrupt automatic camera navigation if the user drags, scrolls, or zooms
     controls.addEventListener('start', cancelNavAnimation);
 
     const rotateToFeature = (feature) => {
@@ -587,23 +597,32 @@ export default function EarthCanvas({
       const startDist = startPos.length();
       const startNorm = startPos.clone().normalize();
 
-      // Maintain user's zoom or frame between 3.8 and 5.2 to avoid clipping or excessive zoom
-      const targetDist = Math.max(3.8, Math.min(startDist, 5.2));
-      const targetUnitVec = latLonToVector3(targetLat, targetLon, 1.0).normalize();
+      // Maintain comfortable viewing zoom: gently zoom in if far out, or preserve current framing
+      let targetDist = startDist;
+      if (startDist > 5.5) {
+        targetDist = 4.8;
+      } else if (startDist < 3.2) {
+        targetDist = 3.5;
+      }
+
+      const targetUnitVecLocal = latLonToVector3(targetLat, targetLon, 1.0).normalize();
+      const targetUnitVec = targetUnitVecLocal.clone().applyEuler(earthMesh.rotation).normalize();
 
       // Compute quaternions for spherical great-circle rotation arc
       const startQ = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), startNorm);
       const targetQ = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), targetUnitVec);
 
-      const duration = 650; // Smooth 650ms navigation transition
+      const duration = 650; // Controlled 650ms responsive navigation transition
       const startTime = performance.now();
 
       const animateCameraStep = () => {
         const elapsed = performance.now() - startTime;
         const progress = Math.min(1.0, elapsed / duration);
 
-        // Smooth cubic ease-out curve
-        const ease = 1 - Math.pow(1 - progress, 3);
+        // Professional smooth cubic ease-in-out curve (zero initial acceleration bump, gentle settling)
+        const ease = progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 
         const currentQ = new THREE.Quaternion().slerpQuaternions(startQ, targetQ, ease);
         const currentDir = new THREE.Vector3(0, 0, 1).applyQuaternion(currentQ);
@@ -683,6 +702,9 @@ export default function EarthCanvas({
 
     let pointerDownPos = { x: 0, y: 0 };
     let pointerDownTime = 0;
+    let isPointerDown = false;
+    let dragSamples = [];
+    let inertiaVel = { x: 0, y: 0 };
     let lastHoveredFeature = null;
     let hoverFrameId = null;
 
@@ -704,6 +726,9 @@ export default function EarthCanvas({
 
     const onPointerDown = (e) => {
       cancelNavAnimation();
+      isPointerDown = true;
+      inertiaVel = { x: 0, y: 0 };
+      dragSamples = [{ x: e.clientX, y: e.clientY, time: Date.now() }];
       // Dynamically adjust OrbitControls rotateSpeed: reduced for controlled, precise touch dragging, standard for desktop mouse
       if (e.pointerType === 'touch') {
         controls.rotateSpeed = 0.28;
@@ -715,10 +740,13 @@ export default function EarthCanvas({
     };
 
     const onTouchStart = () => {
+      cancelNavAnimation();
       controls.rotateSpeed = 0.28;
+      inertiaVel = { x: 0, y: 0 };
     };
 
     const onPointerUp = (e) => {
+      isPointerDown = false;
       const dx = e.clientX - pointerDownPos.x;
       const dy = e.clientY - pointerDownPos.y;
       const dist = Math.hypot(dx, dy);
@@ -727,6 +755,8 @@ export default function EarthCanvas({
       // Concise tap/click (not a drag rotation)
       const maxTapDist = e.pointerType === 'touch' ? 16 : 8;
       if (dist < maxTapDist && duration < 500) {
+        inertiaVel = { x: 0, y: 0 };
+        dragSamples = [];
         const feature = getCountryAtPointer(e.clientX, e.clientY);
 
         if (feature) {
@@ -737,12 +767,61 @@ export default function EarthCanvas({
           if (onCountrySelect) onCountrySelect(null);
         }
       } else {
-        // Drag rotation ended; update hover for current pointer position
+        // Drag rotation ended; compute smooth inertial momentum from recent drag trajectory
+        const now = Date.now();
+        const recentSamples = dragSamples.filter((s) => now - s.time <= 100);
+
+        if (recentSamples.length >= 2) {
+          const first = recentSamples[0];
+          const last = recentSamples[recentSamples.length - 1];
+          const dt = last.time - first.time;
+
+          if (dt > 12) {
+            const vx = (last.x - first.x) / dt; // px/ms
+            const vy = (last.y - first.y) / dt; // px/ms
+            const rawSpeed = Math.hypot(vx, vy);
+
+            // Deadzone threshold: ignore tiny twitches or static releases
+            const minSpeed = 0.08; // px/ms
+            // Max speed cap: prevent crazy spinning
+            const maxSpeed = 1.5; // px/ms
+
+            if (rawSpeed >= minSpeed) {
+              const speed = Math.min(rawSpeed, maxSpeed);
+              const speedFactor = speed / rawSpeed;
+              const clampedVx = vx * speedFactor;
+              const clampedVy = vy * speedFactor;
+
+              // Convert pixel velocity (px/ms) to radians per frame (~16.67ms)
+              const frameMs = 16.67;
+              const domHeight = renderer?.domElement?.clientHeight || 600;
+              const currentRotateSpeed = controls.rotateSpeed;
+
+              // Subtle factor for natural momentum feel
+              const momentumFactor = 0.22;
+
+              const radX = (2 * Math.PI * (clampedVx * frameMs) / domHeight) * currentRotateSpeed * momentumFactor;
+              const radY = (2 * Math.PI * (clampedVy * frameMs) / domHeight) * currentRotateSpeed * momentumFactor;
+
+              inertiaVel = { x: radX, y: radY };
+            }
+          }
+        }
+        dragSamples = [];
         updateHoverState(e.clientX, e.clientY);
       }
     };
 
     const onPointerMove = (e) => {
+      // Record drag samples for recent velocity calculation when pointer is pressed down
+      if (isPointerDown && e.clientX !== undefined && e.clientY !== undefined) {
+        const now = Date.now();
+        dragSamples.push({ x: e.clientX, y: e.clientY, time: now });
+        while (dragSamples.length > 0 && now - dragSamples[0].time > 120) {
+          dragSamples.shift();
+        }
+      }
+
       if (e.pointerType === 'touch') return;
       lastPointerPosRef.current = { x: e.clientX, y: e.clientY };
 
@@ -760,6 +839,8 @@ export default function EarthCanvas({
     };
 
     const onPointerLeave = () => {
+      isPointerDown = false;
+      dragSamples = [];
       if (hoverFrameId) {
         cancelAnimationFrame(hoverFrameId);
         hoverFrameId = null;
@@ -786,6 +867,7 @@ export default function EarthCanvas({
     controls.addEventListener('change', onControlsChange);
 
     const domElement = renderer.domElement;
+    domElement.style.touchAction = 'none';
     domElement.addEventListener('pointerdown', onPointerDown);
     domElement.addEventListener('pointerup', onPointerUp);
     domElement.addEventListener('pointermove', onPointerMove);
@@ -807,6 +889,20 @@ export default function EarthCanvas({
       nightLightsUniforms.uSunDirection.value.copy(currentSunDir);
       if (atmosMat.uniforms.uSunDirection) {
         atmosMat.uniforms.uSunDirection.value.copy(currentSunDir);
+      }
+
+      // Apply subtle inertial rotation velocity from recent drag and decelerate smoothly
+      if (Math.abs(inertiaVel.x) > 0.00001 || Math.abs(inertiaVel.y) > 0.00001) {
+        if (typeof controls.rotateLeft === 'function' && typeof controls.rotateUp === 'function') {
+          controls.rotateLeft(inertiaVel.x);
+          controls.rotateUp(inertiaVel.y);
+        }
+        inertiaVel.x *= 0.88;
+        inertiaVel.y *= 0.88;
+        if (Math.hypot(inertiaVel.x, inertiaVel.y) < 0.00001) {
+          inertiaVel.x = 0;
+          inertiaVel.y = 0;
+        }
       }
 
       // Smooth interaction update with inertia damping
