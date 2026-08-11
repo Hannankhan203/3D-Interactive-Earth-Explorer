@@ -73,9 +73,16 @@ export default function CountrySearch({ onSelectCountry, resetTrigger = 0 }) {
     return [{ label: 'All Regions', value: 'ALL' }, ...sorted.map((r) => ({ label: r, value: r }))];
   }, [selectedContinent]);
 
+const normalizeStr = (str) =>
+  (str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
   // Compute filtered search results
   const results = useMemo(() => {
-    const trimmed = query.trim().toLowerCase();
+    const trimmed = query.trim();
+    const normTrimmed = normalizeStr(trimmed);
     const hasFilter = selectedContinent !== 'ALL' || selectedRegion !== 'ALL';
 
     if (!trimmed && !hasFilter && !isOpen) return [];
@@ -109,19 +116,19 @@ export default function CountrySearch({ onSelectCountry, resetTrigger = 0 }) {
       }
 
       // 3. Search query check
-      const nameLower = name.toLowerCase();
-      const officialLower = (details?.officialName || '').toLowerCase();
-      const capitalLower = (details?.capital || '').toLowerCase();
-      const iso2Lower = (details?.iso2 || '').toLowerCase();
-      const iso3Lower = (details?.iso3 || '').toLowerCase();
+      const normName = normalizeStr(name);
+      const normOfficial = normalizeStr(details?.officialName);
+      const normCapital = normalizeStr(details?.capital);
+      const normIso2 = normalizeStr(details?.iso2);
+      const normIso3 = normalizeStr(details?.iso3);
 
-      if (trimmed) {
-        const isNameExact = nameLower === trimmed;
-        const isNameStart = nameLower.startsWith(trimmed);
-        const isNameContains = nameLower.includes(trimmed);
-        const isOfficialContains = officialLower.includes(trimmed);
-        const isCapitalContains = capitalLower.includes(trimmed);
-        const isIsoMatch = iso2Lower === trimmed || iso3Lower === trimmed;
+      if (normTrimmed) {
+        const isNameExact = normName === normTrimmed;
+        const isNameStart = normName.startsWith(normTrimmed);
+        const isNameContains = normName.includes(normTrimmed);
+        const isOfficialContains = normOfficial.includes(normTrimmed);
+        const isCapitalContains = normCapital.includes(normTrimmed);
+        const isIsoMatch = normIso2 === normTrimmed || normIso3 === normTrimmed;
 
         if (!isNameExact && !isNameStart && !isNameContains && !isOfficialContains && !isCapitalContains && !isIsoMatch) {
           continue;
@@ -386,8 +393,8 @@ export default function CountrySearch({ onSelectCountry, resetTrigger = 0 }) {
               );
             })
           ) : (
-            <div className="p-3 text-center text-slate-500 text-xs font-sans">
-              No matching countries
+            <div className="p-3 text-center text-slate-400 text-xs font-sans">
+              No country found
             </div>
           )}
         </div>

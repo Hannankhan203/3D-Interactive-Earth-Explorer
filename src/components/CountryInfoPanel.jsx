@@ -66,24 +66,32 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
       const containerWidth = window.innerWidth;
       const containerHeight = window.innerHeight;
 
-      const panelW = size.width || 340;
-      const panelH = size.height || 310;
+      // Fit panel dimensions to smaller viewports automatically
+      const targetW = Math.min(size.width || 340, containerWidth - 20);
+      const targetH = Math.min(size.height || 340, containerHeight - 80);
 
-      // Default initial position: below top search bar at top-left
+      const panelW = Math.max(260, targetW);
+      const panelH = Math.max(200, targetH);
+
+      // Default initial position
       let defaultLeft = 16;
       let defaultTop = 72;
 
-      // On narrow mobile screens, center horizontally
-      if (containerWidth < 480) {
-        defaultLeft = Math.max(8, (containerWidth - panelW) / 2);
+      // On mobile screens, center horizontally
+      if (containerWidth < 500) {
+        defaultLeft = Math.max(10, (containerWidth - panelW) / 2);
         defaultTop = 64;
       }
 
-      // Clamp coordinates strictly within viewport bounds with 10px margin
-      const safeMinX = 10;
-      const safeMaxX = Math.max(safeMinX, containerWidth - panelW - 10);
-      const safeMinY = 10;
-      const safeMaxY = Math.max(safeMinY, containerHeight - panelH - 10);
+      // Clamp coordinates strictly within viewport bounds with 8px margin
+      const safeMinX = 8;
+      const safeMaxX = Math.max(safeMinX, containerWidth - panelW - 8);
+      const safeMinY = 8;
+      const safeMaxY = Math.max(safeMinY, containerHeight - panelH - 8);
+
+      if (panelW !== size.width || panelH !== size.height) {
+        setSize({ width: panelW, height: panelH });
+      }
 
       setPosition((prevPos) => {
         if (!prevPos) {
@@ -262,14 +270,26 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
       <div
         onPointerDown={handleHeaderPointerDown}
         onTouchStart={handleHeaderPointerDown}
-        className={`flex items-start justify-between pb-3 border-b border-slate-800 gap-2 select-none touch-none shrink-0 ${
+        className={`flex items-center justify-between pb-2.5 border-b border-slate-800 gap-2 select-none touch-none shrink-0 ${
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
         title="Drag header to position window"
       >
-        <div className="flex items-center gap-3 overflow-hidden pointer-events-none">
+        <div className="flex items-center gap-2.5 overflow-hidden pointer-events-none min-w-0">
+          {/* Drag Handle Grip Icon */}
+          <div className="text-slate-600 flex items-center shrink-0" aria-hidden="true">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
+              <circle cx="5" cy="4" r="1.2" />
+              <circle cx="11" cy="4" r="1.2" />
+              <circle cx="5" cy="8" r="1.2" />
+              <circle cx="11" cy="8" r="1.2" />
+              <circle cx="5" cy="12" r="1.2" />
+              <circle cx="11" cy="12" r="1.2" />
+            </svg>
+          </div>
+
           {/* Flag */}
-          <div className="w-8 h-5.5 rounded border border-slate-800 bg-slate-900 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
+          <div className="w-7 h-5 rounded border border-slate-800 bg-slate-900 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
             {details.flagUrl && !imgError ? (
               <img
                 src={details.flagUrl}
@@ -288,8 +308,10 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
             <h2 className="text-sm font-bold text-slate-100 tracking-wide truncate">
               {details.name}
             </h2>
-            <p className="text-[11px] text-slate-400 truncate">
-              {details.capital && details.capital !== 'Capital City' ? details.capital : details.continent}
+            <p className="text-[10px] text-slate-400 font-mono truncate">
+              {details.officialName && details.officialName !== details.name
+                ? details.officialName
+                : (details.capital && details.capital !== 'Capital City' ? details.capital : details.continent)}
             </p>
           </div>
         </div>
@@ -299,7 +321,7 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
           onPointerDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
           onClick={handleClose}
-          className="p-1 text-slate-400 hover:text-slate-200 transition-colors rounded hover:bg-slate-800 cursor-pointer shrink-0 text-xs"
+          className="p-1 text-slate-400 hover:text-slate-100 transition-colors rounded hover:bg-slate-800 cursor-pointer shrink-0 text-xs"
           title="Close window"
           aria-label="Close panel"
         >
@@ -308,80 +330,90 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
       </div>
 
       {/* Structured Information List */}
-      <div className="flex-1 overflow-y-auto mt-3 pr-1 text-xs space-y-3 font-sans custom-scrollbar">
-        {/* Capital & Coordinates */}
-        {details.capital && (
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+      <div className="flex-1 overflow-y-auto mt-2.5 pr-1 text-xs space-y-2.5 font-sans custom-scrollbar">
+        {/* Capital & Region Grid */}
+        <div className="grid grid-cols-2 gap-2 bg-slate-900/60 border border-slate-800/80 rounded-lg p-2">
+          {/* Capital & Coordinates */}
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
               Capital
             </span>
-            <span className="text-slate-200 font-medium">
-              {details.capital}
-              {details.capitalLat !== undefined && details.capitalLon !== undefined && details.capitalLat !== 0 && (
-                <span className="text-[10px] text-slate-400 font-mono ml-1.5">
-                  ({Math.abs(details.capitalLat).toFixed(2)}°{details.capitalLat >= 0 ? 'N' : 'S'}, {Math.abs(details.capitalLon).toFixed(2)}°{details.capitalLon >= 0 ? 'E' : 'W'})
-                </span>
-              )}
+            <span className="text-slate-200 font-semibold truncate text-[11px]">
+              {details.capital || 'N/A'}
+            </span>
+            {details.capitalLat !== undefined && details.capitalLon !== undefined && details.capitalLat !== 0 && (
+              <span className="text-[9px] text-slate-400 font-mono leading-none truncate">
+                {Math.abs(details.capitalLat).toFixed(1)}°{details.capitalLat >= 0 ? 'N' : 'S'}, {Math.abs(details.capitalLon).toFixed(1)}°{details.capitalLon >= 0 ? 'E' : 'W'}
+              </span>
+            )}
+          </div>
+
+          {/* Region & Continent */}
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
+              Region
+            </span>
+            <span className="text-slate-200 font-semibold truncate text-[11px]">
+              {details.region || details.continent}
+            </span>
+            <span className="text-[9px] text-slate-400 font-mono leading-none truncate">
+              {details.continent}
             </span>
           </div>
-        )}
-
-        {/* Region & Continent */}
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
-            Region
-          </span>
-          <span className="text-slate-200 font-medium">
-            {details.region ? `${details.region} • ${details.continent}` : details.continent}
-          </span>
         </div>
 
-        {/* Population */}
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
-            Population
-          </span>
-          <span className="text-slate-200 font-mono font-medium">
-            {details.population}
-          </span>
+        {/* Population & Area Grid */}
+        <div className="grid grid-cols-2 gap-2 bg-slate-900/60 border border-slate-800/80 rounded-lg p-2">
+          {/* Population */}
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
+              Population
+            </span>
+            <span className="text-slate-100 font-mono font-semibold text-[11px] truncate">
+              {details.population}
+            </span>
+          </div>
+
+          {/* Area */}
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
+              Area
+            </span>
+            <span className="text-slate-100 font-mono font-semibold text-[11px] truncate">
+              {details.area}
+            </span>
+          </div>
         </div>
 
-        {/* Area */}
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
-            Area
-          </span>
-          <span className="text-slate-200 font-mono font-medium">
-            {details.area}
-          </span>
-        </div>
+        {/* Currency & Official Language Grid */}
+        <div className="grid grid-cols-2 gap-2 bg-slate-900/60 border border-slate-800/80 rounded-lg p-2">
+          {/* Currency */}
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
+              Currency
+            </span>
+            <span className="text-slate-200 font-semibold text-[11px] truncate">
+              {details.currency}
+            </span>
+          </div>
 
-        {/* Currency */}
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
-            Currency
-          </span>
-          <span className="text-slate-200 font-medium">
-            {details.currency}
-          </span>
-        </div>
-
-        {/* Official Language */}
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
-            Official Language
-          </span>
-          <span className="text-slate-200 font-medium">
-            {details.language}
-          </span>
+          {/* Official Language */}
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
+              Language
+            </span>
+            <span className="text-slate-200 font-semibold text-[11px] truncate">
+              {details.language}
+            </span>
+          </div>
         </div>
 
         {/* Neighboring Countries */}
         {(() => {
           const neighbors = getNeighborFeatures(selectedFeature);
           return (
-            <div className="flex flex-col gap-1 pt-2 border-t border-slate-800/80">
-              <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+            <div className="flex flex-col gap-1 pt-1.5 border-t border-slate-800/80">
+              <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
                 Neighboring Countries ({neighbors.length})
               </span>
               {neighbors.length > 0 ? (
@@ -399,7 +431,7 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
                             onSelectCountry(nFeat);
                           }
                         }}
-                        className="px-1.5 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded text-[11px] text-sky-200/90 hover:text-sky-100 font-medium cursor-pointer transition-colors"
+                        className="px-1.5 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded text-[10px] text-sky-200/90 hover:text-sky-100 font-medium cursor-pointer transition-colors"
                         title={`Select ${nName}`}
                       >
                         {nName}
@@ -408,7 +440,7 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
                   })}
                 </div>
               ) : (
-                <span className="text-slate-400 text-[11px] italic">
+                <span className="text-slate-400 text-[10px] italic">
                   None (Island or isolated territory)
                 </span>
               )}

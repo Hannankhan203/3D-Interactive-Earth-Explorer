@@ -1047,6 +1047,16 @@ export default function EarthCanvas({
     };
     controls.addEventListener('change', onControlsChange);
 
+    const onWheel = () => {
+      cancelNavAnimation();
+    };
+
+    const onTouchMove = (e) => {
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+    };
+
     const domElement = renderer.domElement;
     domElement.style.touchAction = 'none';
     domElement.addEventListener('pointerdown', onPointerDown);
@@ -1054,6 +1064,8 @@ export default function EarthCanvas({
     domElement.addEventListener('pointermove', onPointerMove);
     domElement.addEventListener('pointerleave', onPointerLeave);
     domElement.addEventListener('touchstart', onTouchStart, { passive: true });
+    domElement.addEventListener('touchmove', onTouchMove, { passive: false });
+    domElement.addEventListener('wheel', onWheel, { passive: true });
 
     // 11. requestAnimationFrame Render Loop
     let animationFrameId;
@@ -1238,6 +1250,8 @@ export default function EarthCanvas({
       domElement.removeEventListener('pointermove', onPointerMove);
       domElement.removeEventListener('pointerleave', onPointerLeave);
       domElement.removeEventListener('touchstart', onTouchStart);
+      domElement.removeEventListener('touchmove', onTouchMove);
+      domElement.removeEventListener('wheel', onWheel);
       if (hoverFrameId) cancelAnimationFrame(hoverFrameId);
       clearSelection();
       activeHoverGroups.forEach((item) => {

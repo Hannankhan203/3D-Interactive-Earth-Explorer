@@ -95,23 +95,30 @@ export default function TimeSimulationControls({ simulatedTime, onSimulateTime }
           onClick={() => setIsOpen(true)}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border backdrop-blur-md transition-all shadow-lg cursor-pointer ${
             isSimulating
-              ? 'bg-amber-950/80 border-amber-500/60 text-amber-200 hover:bg-amber-900/90 hover:border-amber-400'
-              : 'bg-slate-950/80 border-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-900/90 hover:border-slate-700'
+              ? 'bg-amber-950/85 border-amber-500/70 text-amber-200 hover:bg-amber-900/90 hover:border-amber-400'
+              : 'bg-slate-950/85 border-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-900/90 hover:border-slate-700'
           }`}
           title="Open Time Simulation settings"
           aria-label="Time Simulation settings"
         >
-          {/* Status Dot */}
+          {/* Status Indicator Dot */}
           <span
             className={`w-2 h-2 rounded-full shrink-0 ${
-              isSimulating ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'
+              isSimulating ? 'bg-amber-400 animate-pulse ring-2 ring-amber-400/30' : 'bg-emerald-400'
             }`}
           />
 
           <div className="flex flex-col text-left">
-            <span className="text-[10px] font-semibold tracking-wider uppercase leading-none">
-              {isSimulating ? 'Time Simulation' : 'Current Time'}
-            </span>
+            <div className="flex items-center gap-1.5 leading-none">
+              <span className="text-[10px] font-bold tracking-wider uppercase">
+                {isSimulating ? 'Simulated Time' : 'Current Time'}
+              </span>
+              {isSimulating && (
+                <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1 py-0.2 rounded font-mono font-medium">
+                  SIM
+                </span>
+              )}
+            </div>
             <span className="text-[11px] font-mono text-slate-400 font-medium leading-tight mt-0.5">
               {dateDisplayStr} &bull; {timeDisplayStr}
             </span>
@@ -129,15 +136,15 @@ export default function TimeSimulationControls({ simulatedTime, onSimulateTime }
             <div className="flex items-center gap-2">
               <span
                 className={`w-2.5 h-2.5 rounded-full ${
-                  isSimulating ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'
+                  isSimulating ? 'bg-amber-400 animate-pulse ring-2 ring-amber-400/30' : 'bg-emerald-400'
                 }`}
               />
               <div className="flex flex-col">
                 <span className="text-xs font-bold tracking-wide text-slate-100">
-                  Time Simulation
+                  Time & Illumination
                 </span>
-                <span className="text-[10px] font-sans text-slate-400">
-                  Solar illumination & day/night control
+                <span className="text-[10px] text-slate-400">
+                  Control Earth solar positioning
                 </span>
               </div>
             </div>
@@ -152,48 +159,89 @@ export default function TimeSimulationControls({ simulatedTime, onSimulateTime }
             </button>
           </div>
 
-          {/* Active Mode Status & Telemetry */}
-          <div className="bg-slate-900/80 border border-slate-800/80 rounded-lg p-2.5 flex items-center justify-between text-xs">
-            <div className="flex flex-col">
-              <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
-                Illumination Mode
-              </span>
-              <span
-                className={`font-semibold text-[11px] ${
-                  isSimulating ? 'text-amber-400' : 'text-emerald-400'
-                }`}
-              >
-                {isSimulating ? 'TIME SIMULATION' : 'REAL CURRENT TIME'}
-              </span>
-            </div>
-            <div className="flex flex-col text-right font-mono text-[11px]">
-              <span className="text-slate-100 font-bold">{timeDisplayStr}</span>
-              <span className="text-[9px] text-slate-400">{utcDisplayStr}</span>
-            </div>
+          {/* Mode Switcher Segment Control */}
+          <div className="grid grid-cols-2 gap-1 bg-slate-900/90 p-1 rounded-lg border border-slate-800">
+            <button
+              type="button"
+              onClick={handleResetToCurrentTime}
+              className={`py-1.5 px-2 rounded-md text-[11px] font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                !isSimulating
+                  ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 shadow-sm font-semibold'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${!isSimulating ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+              <span>Current Time</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (!isSimulating) {
+                  onSimulateTime(new Date());
+                }
+              }}
+              className={`py-1.5 px-2 rounded-md text-[11px] font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                isSimulating
+                  ? 'bg-amber-950/80 text-amber-300 border border-amber-500/50 shadow-sm font-semibold'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${isSimulating ? 'bg-amber-400 animate-pulse' : 'bg-slate-600'}`} />
+              <span>Time Simulation</span>
+            </button>
           </div>
+
+          {/* Simulation Status Notice */}
+          {isSimulating ? (
+            <div className="bg-amber-950/40 border border-amber-500/40 rounded-lg p-2.5 flex items-start gap-2 text-xs">
+              <span className="text-amber-400 text-sm leading-none mt-0.5">⚠️</span>
+              <div className="flex flex-col text-[10px] text-amber-200/90 leading-normal">
+                <span className="font-semibold text-amber-300">Simulated Illumination Active</span>
+                <span>Earth day/night lighting reflects custom date and time below.</span>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-lg p-2.5 flex items-center justify-between text-xs">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-mono text-emerald-400/80 uppercase tracking-wider">
+                  Live Sync
+                </span>
+                <span className="font-semibold text-[11px] text-emerald-300">
+                  REAL CURRENT UTC TIME
+                </span>
+              </div>
+              <div className="flex flex-col text-right font-mono text-[11px]">
+                <span className="text-slate-100 font-bold">{timeDisplayStr}</span>
+                <span className="text-[9px] text-slate-400">{utcDisplayStr}</span>
+              </div>
+            </div>
+          )}
 
           {/* Date and Time Inputs */}
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-medium text-slate-400 font-sans">
-                Date
+              <label className="text-[10px] font-medium text-slate-400 font-sans flex items-center justify-between">
+                <span>Date</span>
+                <span className="text-[9px] font-mono text-slate-500">Local</span>
               </label>
               <input
                 type="date"
                 value={dateInputVal}
                 onChange={handleDateChange}
-                className="w-full bg-slate-900 border border-slate-800 focus:border-sky-500 rounded-md px-2 py-1 text-xs text-slate-200 font-mono outline-none transition-colors cursor-pointer"
+                className="w-full bg-slate-900 border border-slate-800 focus:border-amber-500/70 rounded-md px-2 py-1 text-xs text-slate-200 font-mono outline-none transition-colors cursor-pointer"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-medium text-slate-400 font-sans">
-                Time
+              <label className="text-[10px] font-medium text-slate-400 font-sans flex items-center justify-between">
+                <span>Time</span>
+                <span className="text-[9px] font-mono text-slate-500">Local</span>
               </label>
               <input
                 type="time"
                 value={timeInputVal}
                 onChange={handleTimeChange}
-                className="w-full bg-slate-900 border border-slate-800 focus:border-sky-500 rounded-md px-2 py-1 text-xs text-slate-200 font-mono outline-none transition-colors cursor-pointer"
+                className="w-full bg-slate-900 border border-slate-800 focus:border-amber-500/70 rounded-md px-2 py-1 text-xs text-slate-200 font-mono outline-none transition-colors cursor-pointer"
               />
             </div>
           </div>
@@ -240,7 +288,7 @@ export default function TimeSimulationControls({ simulatedTime, onSimulateTime }
                     onClick={() => handleApplyPreset(p.hour, p.min)}
                     className={`px-2.5 py-1.5 rounded-lg border text-left transition-all cursor-pointer flex items-center justify-between ${
                       isActive
-                        ? 'bg-amber-500/20 border-amber-500/60 text-amber-200'
+                        ? 'bg-amber-500/20 border-amber-500/60 text-amber-200 shadow-sm'
                         : 'bg-slate-900/60 border-slate-800 hover:bg-slate-800/80 text-slate-300'
                     }`}
                   >
@@ -261,16 +309,16 @@ export default function TimeSimulationControls({ simulatedTime, onSimulateTime }
               <button
                 type="button"
                 onClick={handleResetToCurrentTime}
-                className="w-full py-1.5 px-3 bg-sky-950/60 hover:bg-sky-900/80 text-sky-300 border border-sky-800/80 hover:border-sky-600 rounded-lg text-xs font-medium transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5"
+                className="w-full py-1.5 px-3 bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-800/80 hover:border-emerald-600 rounded-lg text-xs font-medium transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                <span>Use Current Time</span>
+                <span>Return to Real Current Time</span>
               </button>
             ) : (
               <p className="text-[10px] text-slate-400 text-center font-sans">
-                Currently showing real-time solar illumination. Change date/time above to simulate.
+                Currently showing real-time solar illumination. Select Time Simulation to alter date or time.
               </p>
             )}
           </div>
