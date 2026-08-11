@@ -1,6 +1,6 @@
 {
-  "name": "3D Interactive Earth Sphere",
-  "description": "A professional 3D Interactive Earth Sphere application built with React, Vite, Three.js, and WebGL.",
+  "name": "Earth Explorer — Interactive 3D Globe",
+  "description": "Explore an interactive 3D Earth with country information, geographic boundaries, day and night visualization, and real-time time simulation.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
