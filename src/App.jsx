@@ -20,6 +20,21 @@ export default function App() {
   const [resetTrigger, setResetTrigger] = useState(0);
   const [zoomInTrigger, setZoomInTrigger] = useState(0);
   const [zoomOutTrigger, setZoomOutTrigger] = useState(0);
+  const [isEarthReady, setIsEarthReady] = useState(false);
+  const [earthError, setEarthError] = useState(null);
+  const [showLoadingOverlay, setShowLoadingOverlay] = useState(true);
+
+  const handleEarthReady = () => {
+    setIsEarthReady(true);
+    // Smoothly remove loading overlay after fade transition
+    setTimeout(() => {
+      setShowLoadingOverlay(false);
+    }, 600);
+  };
+
+  const handleEarthError = (errMsg) => {
+    setEarthError(errMsg || 'Unable to initialize 3D graphics context.');
+  };
 
   const handleResetGlobe = () => {
     setSelectedCountry(null);
@@ -73,8 +88,58 @@ export default function App() {
           resetTrigger={resetTrigger}
           zoomInTrigger={zoomInTrigger}
           zoomOutTrigger={zoomOutTrigger}
+          onReady={handleEarthReady}
+          onError={handleEarthError}
         />
       </div>
+
+      {/* Minimal Professional Loading & Error Overlay */}
+      {showLoadingOverlay && (
+        <div
+          className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#01040f] text-slate-100 transition-opacity duration-500 ease-out ${
+            isEarthReady && !earthError ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
+        >
+          {earthError ? (
+            /* Friendly Error State */
+            <div className="max-w-md mx-auto px-6 text-center space-y-4">
+              <div className="w-12 h-12 mx-auto rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 shadow-lg">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h2 className="text-base font-semibold text-slate-100 tracking-wide">
+                Unable to Display 3D Globe
+              </h2>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {earthError}
+              </p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-lg text-xs font-medium text-slate-200 transition-colors cursor-pointer shadow-md"
+              >
+                Reload Application
+              </button>
+            </div>
+          ) : (
+            /* Minimal Professional Loading State */
+            <div className="flex flex-col items-center gap-4 text-center px-4">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                <h1 className="text-sm font-semibold tracking-widest uppercase text-slate-200 font-sans">
+                  3D Interactive Earth
+                </h1>
+              </div>
+
+              <div className="flex items-center gap-2.5 text-xs text-slate-400 font-sans">
+                <div className="w-4 h-4 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
+                <span>Loading Earth...</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Minimal Geographic Navigation Controls */}
       <NavControls
@@ -107,8 +172,9 @@ export default function App() {
             <button
               type="button"
               onClick={handleResetGlobe}
-              className="flex items-center gap-1 px-2 py-0.5 bg-slate-950/80 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded text-[10px] font-medium text-slate-400 hover:text-slate-200 transition-colors cursor-pointer backdrop-blur-md shadow-sm"
+              className="flex items-center gap-1 px-2.5 py-1 sm:px-2 sm:py-0.5 bg-slate-950/80 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded text-[10px] font-medium text-slate-400 hover:text-slate-200 transition-colors cursor-pointer backdrop-blur-md shadow-sm min-h-[28px] sm:min-h-0 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none"
               title="Reset view and clear selection"
+              aria-label="Reset view and clear selection"
             >
               <svg className="w-3 h-3 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -134,17 +200,17 @@ export default function App() {
 
       {/* Bottom Left Navigation Hint (Fades Out) */}
       <div
-        className={`absolute bottom-4 left-4 z-20 pointer-events-none transition-opacity duration-700 ease-out ${
+        className={`absolute bottom-3 left-3 sm:bottom-4 sm:left-4 z-20 pointer-events-none transition-opacity duration-700 ease-out ${
           showHint ? 'opacity-100' : 'opacity-0'
         }`}
       >
         <p className="text-[10px] font-sans text-slate-400/70 tracking-wide">
-          Drag to rotate &bull; Scroll to zoom
+          Drag to rotate &bull; Pinch / Scroll to zoom
         </p>
       </div>
 
       {/* Bottom Right Telemetry */}
-      <div className="absolute bottom-4 right-4 z-20 pointer-events-none">
+      <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-20 pointer-events-none">
         <div className="text-[10px] font-mono text-slate-400/90 tracking-wide flex items-center gap-1.5">
           <span>
             {Math.abs(coords.lat || 0).toFixed(4)}° {coords.lat >= 0 ? 'N' : 'S'}

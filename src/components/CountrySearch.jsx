@@ -217,7 +217,7 @@ const normalizeStr = (str) =>
   return (
     <div
       ref={containerRef}
-      className="relative w-64 sm:w-72 z-30 space-y-1.5 font-sans"
+      className="relative w-[calc(100vw-32px)] sm:w-72 max-w-xs z-30 space-y-1.5 font-sans"
     >
       {/* Primary Compact Search Input Bar */}
       <div className="relative flex items-center shadow-lg rounded-md bg-slate-950/90 border border-slate-800 backdrop-blur-md">
@@ -241,7 +241,8 @@ const normalizeStr = (str) =>
           }}
           onKeyDown={handleKeyDown}
           placeholder="Search country..."
-          className="w-full h-8 pl-8 pr-14 bg-transparent text-xs text-slate-100 placeholder-slate-500 focus:outline-none"
+          aria-label="Search country"
+          className="w-full h-9 sm:h-8 pl-8 pr-14 bg-transparent text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 rounded-md"
         />
 
         {/* Action Controls inside Search Input Bar */}
@@ -254,10 +255,11 @@ const normalizeStr = (str) =>
                 setQuery('');
                 if (inputRef.current) inputRef.current.focus();
               }}
-              className="p-1 text-slate-400 hover:text-slate-200 transition-colors rounded hover:bg-slate-800 cursor-pointer"
+              className="p-1.5 sm:p-1 text-slate-400 hover:text-slate-200 transition-colors rounded hover:bg-slate-800 cursor-pointer min-w-[28px] min-h-[28px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none"
               title="Clear text"
+              aria-label="Clear search text"
             >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 sm:w-3 sm:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -267,10 +269,11 @@ const normalizeStr = (str) =>
           <button
             type="button"
             onClick={() => setShowFilters(!showFilters)}
-            className={`p-1 text-slate-400 hover:text-slate-200 transition-colors rounded hover:bg-slate-800 cursor-pointer relative ${
+            className={`p-1.5 sm:p-1 text-slate-400 hover:text-slate-200 transition-colors rounded hover:bg-slate-800 cursor-pointer relative min-w-[28px] min-h-[28px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none ${
               hasActiveFilters || showFilters ? 'text-cyan-400 bg-slate-900' : ''
             }`}
             title="Toggle geographic filters"
+            aria-label="Toggle geographic filters"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -293,8 +296,9 @@ const normalizeStr = (str) =>
               setSelectedRegion('ALL');
               setIsOpen(true);
             }}
-            className="flex-1 h-6 px-1.5 bg-slate-900 border border-slate-800 rounded text-[10px] text-slate-300 focus:outline-none focus:border-slate-700 cursor-pointer truncate"
+            className="flex-1 h-7 sm:h-6 px-1.5 bg-slate-900 border border-slate-800 rounded text-xs sm:text-[10px] text-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 cursor-pointer truncate"
             title="Filter by Continent"
+            aria-label="Filter by Continent"
           >
             {CONTINENT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value} className="bg-slate-950 text-slate-200">
@@ -310,8 +314,9 @@ const normalizeStr = (str) =>
               setSelectedRegion(e.target.value);
               setIsOpen(true);
             }}
-            className="flex-1 h-6 px-1.5 bg-slate-900 border border-slate-800 rounded text-[10px] text-slate-300 focus:outline-none focus:border-slate-700 cursor-pointer truncate"
+            className="flex-1 h-7 sm:h-6 px-1.5 bg-slate-900 border border-slate-800 rounded text-xs sm:text-[10px] text-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 cursor-pointer truncate"
             title="Filter by Region"
+            aria-label="Filter by Region"
           >
             {availableRegions.map((opt) => (
               <option key={opt.value} value={opt.value} className="bg-slate-950 text-slate-200">
@@ -328,8 +333,9 @@ const normalizeStr = (str) =>
                 setSelectedContinent('ALL');
                 setSelectedRegion('ALL');
               }}
-              className="h-6 px-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded text-[9px] font-mono text-cyan-400 cursor-pointer shrink-0 transition-colors"
+              className="h-7 sm:h-6 px-2 sm:px-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded text-[10px] sm:text-[9px] font-mono text-cyan-400 cursor-pointer shrink-0 transition-colors focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none"
               title="Reset Filters"
+              aria-label="Reset Filters"
             >
               Reset
             </button>
@@ -339,16 +345,26 @@ const normalizeStr = (str) =>
 
       {/* Search Results Dropdown List */}
       {isOpen && (query.trim().length > 0 || hasActiveFilters) && (
-        <div className="absolute left-0 right-0 max-h-60 overflow-y-auto bg-slate-950/95 border border-slate-800 rounded-md shadow-2xl backdrop-blur-xl divide-y divide-slate-800/60 z-50 text-xs scrollbar-thin">
+        <div className="absolute left-0 right-0 max-h-52 sm:max-h-60 max-h-[40vh] overflow-y-auto bg-slate-950/95 border border-slate-800 rounded-md shadow-2xl backdrop-blur-xl divide-y divide-slate-800/60 z-50 text-xs scrollbar-thin">
           {results.length > 0 ? (
             results.map((item, idx) => {
               const isSelected = idx === activeIndex;
               return (
                 <div
                   key={item.feature.id || item.name}
+                  role="option"
+                  tabIndex={0}
+                  aria-selected={isSelected}
+                  aria-label={`Select ${item.name}`}
                   onClick={() => handleSelect(item)}
                   onMouseEnter={() => setActiveIndex(idx)}
-                  className={`p-2 flex items-center justify-between cursor-pointer transition-colors ${
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSelect(item);
+                    }
+                  }}
+                  className={`p-2.5 sm:p-2 flex items-center justify-between cursor-pointer transition-colors focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none ${
                     isSelected
                       ? 'bg-slate-800/80 text-white'
                       : 'hover:bg-slate-900 text-slate-300'

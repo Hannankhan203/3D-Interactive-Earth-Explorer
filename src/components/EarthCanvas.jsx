@@ -45,9 +45,12 @@ export default function EarthCanvas({
   resetTrigger = 0,
   zoomInTrigger = 0,
   zoomOutTrigger = 0,
+  onReady,
+  onError,
 }) {
   const containerRef = useRef(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [initError, setInitError] = useState(null);
   const [capitalLabel, setCapitalLabel] = useState({ visible: false, x: 0, y: 0, capitalName: '', countryName: '' });
   const [hoveredCountry, setHoveredCountry] = useState(null);
   const selectCountryFeatureRef = useRef(null);
@@ -59,6 +62,16 @@ export default function EarthCanvas({
   const selectedCountryRef = useRef(selectedCountry);
   const onCountryHoverRef = useRef(onCountryHover);
   const simulatedTimeRef = useRef(simulatedTime);
+  const onReadyRef = useRef(onReady);
+  const onErrorRef = useRef(onError);
+
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  }, [onReady]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
 
   useEffect(() => {
     simulatedTimeRef.current = simulatedTime;
@@ -76,39 +89,55 @@ export default function EarthCanvas({
     const container = containerRef.current;
     if (!container) return;
 
-    // Viewport dimensions
-    const width = container.clientWidth || window.innerWidth;
-    const height = container.clientHeight || window.innerHeight;
+    try {
+      // Check WebGL availability
+      if (typeof window !== 'undefined' && !window.WebGLRenderingContext) {
+        throw new Error('WebGL graphics are not supported by your browser.');
+      }
 
-    // 1. Three.js Scene setup
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x01040f); // Dark outer-space background
+      // Viewport dimensions
+      const width = container.clientWidth || window.innerWidth;
+      const height = container.clientHeight || window.innerHeight;
 
-    // Earth's physical axial tilt (23.44 degrees obliquity)
-    const AXIAL_TILT_RAD = THREE.MathUtils.degToRad(-23.44);
-    const tiltEuler = new THREE.Euler(0, 0, AXIAL_TILT_RAD);
+      // 1. Three.js Scene setup
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x01040f); // Dark outer-space background
 
-    // 2. Perspective Camera setup with responsive FOV adaptation
-    const aspect = width / height;
-    const initialFov = aspect < 1 ? Math.min(65, 45 / aspect) : 45;
-    const camera = new THREE.PerspectiveCamera(initialFov, aspect, 0.1, 1000);
-    const initialCamPos = latLonToVector3(30.0, 69.5, 6.0).applyEuler(tiltEuler);
-    camera.position.copy(initialCamPos);
+      // Earth's physical axial tilt (23.44 degrees obliquity)
+      const AXIAL_TILT_RAD = THREE.MathUtils.degToRad(-23.44);
+      const tiltEuler = new THREE.Euler(0, 0, AXIAL_TILT_RAD);
 
-    // 3. WebGL Renderer setup
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      powerPreference: 'high-performance',
-    });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(width, height);
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
+      // 2. Perspective Camera setup with responsive FOV adaptation
+      const aspect = width / height;
+      const initialFov = aspect < 1 ? Math.min(65, 45 / aspect) : 45;
+      const camera = new THREE.PerspectiveCamera(initialFov, aspect, 0.1, 1000);
+      const initialCamPos = latLonToVector3(30.0, 69.5, 6.0).applyEuler(tiltEuler);
+      camera.position.copy(initialCamPos);
 
-    // Clean container and attach WebGL canvas
-    container.innerHTML = '';
-    container.appendChild(renderer.domElement);
+      // 3. WebGL Renderer setup
+      let renderer;
+      try {
+        renderer = new THREE.WebGLRenderer({
+          antialias: true,
+          alpha: true,
+          powerPreference: 'high-performance',
+        });
+      } catch (glErr) {
+        throw new Error('Unable to create WebGL renderer context.');
+      }
+
+      if (!renderer || !renderer.getContext()) {
+        throw new Error('WebGL context creation failed.');
+      }
+
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(width, height);
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.1;
+
+      // Clean container and attach WebGL canvas
+      container.innerHTML = '';
+      container.appendChild(renderer.domElement);
 
     // 4. OrbitControls for interactive 3D navigation and silky-smooth mouse-wheel zoom
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -1211,6 +1240,12 @@ export default function EarthCanvas({
 
     animate();
 
+    // Signal Earth canvas ready after initial frame render
+    requestAnimationFrame(() => {
+      setIsLoaded(true);
+      if (onReadyRef.current) onReadyRef.current();
+    });
+
     // 9. Resize Handling via ResizeObserver with RAF throttling
     let resizeFrameId = null;
     const handleResize = () => {
@@ -1290,6 +1325,12 @@ export default function EarthCanvas({
         renderer.domElement.parentNode.removeChild(renderer.domElement);
       }
     };
+    } catch (err) {
+      console.error('EarthCanvas initialization error:', err);
+      const friendlyMsg = 'Unable to initialize 3D WebGL graphics. Please verify WebGL is enabled in your browser settings.';
+      setInitError(friendlyMsg);
+      if (onErrorRef.current) onErrorRef.current(friendlyMsg);
+    }
   }, []);
 
   // Sync selectedCountry from external props (e.g., search bar or panel close button)
@@ -1345,12 +1386,17 @@ export default function EarthCanvas({
         onContextMenu={(e) => e.preventDefault()}
       />
 
-      {/* Loading Overlay */}
-      {!isLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-950/90 text-slate-300">
-          <div className="flex items-center gap-3">
-            <div className="w-5 h-5 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm font-medium tracking-wide">Initializing 3D WebGL Engine...</span>
+      {/* Error Fallback */}
+      {initError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-950 p-6 text-center text-slate-300">
+          <div className="max-w-sm flex flex-col items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-sm font-semibold text-slate-200">3D Graphics Initialization Failed</h3>
+            <p className="text-xs text-slate-400">{initError}</p>
           </div>
         </div>
       )}

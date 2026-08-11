@@ -67,11 +67,11 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
       const containerHeight = window.innerHeight;
 
       // Fit panel dimensions to smaller viewports automatically
-      const targetW = Math.min(size.width || 340, containerWidth - 20);
-      const targetH = Math.min(size.height || 340, containerHeight - 80);
+      const targetW = Math.min(size.width || 340, containerWidth - 16);
+      const targetH = Math.min(size.height || 310, containerHeight - 80);
 
-      const panelW = Math.max(260, targetW);
-      const panelH = Math.max(200, targetH);
+      const panelW = Math.max(Math.min(260, containerWidth - 16), targetW);
+      const panelH = Math.max(Math.min(180, containerHeight - 80), targetH);
 
       // Default initial position
       let defaultLeft = 16;
@@ -79,7 +79,7 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
 
       // On mobile screens, center horizontally
       if (containerWidth < 500) {
-        defaultLeft = Math.max(10, (containerWidth - panelW) / 2);
+        defaultLeft = Math.max(8, (containerWidth - panelW) / 2);
         defaultTop = 64;
       }
 
@@ -110,13 +110,62 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
 
     computeInitialPos();
     window.addEventListener('resize', computeInitialPos);
-    return () => window.removeEventListener('resize', computeInitialPos);
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('resize', computeInitialPos);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [selectedFeature, size.width, size.height]);
 
   if (!selectedFeature) return null;
 
   const details = getCountryDetails(selectedFeature);
-  if (!details) return null;
+  if (!details) {
+    return (
+      <div
+        ref={panelRef}
+        onPointerDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        style={{
+          position: 'absolute',
+          left: `${currentLeft}px`,
+          top: `${currentTop}px`,
+          width: `${size.width}px`,
+          zIndex: 35,
+        }}
+        className="bg-slate-950/95 backdrop-blur-md border border-slate-800 rounded-lg p-4 shadow-2xl text-slate-200 flex flex-col gap-2"
+      >
+        <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+          <span className="text-xs font-semibold text-slate-300">Country Details</span>
+          <button onClick={handleClose} className="text-xs text-slate-400 hover:text-white p-1">✕</button>
+        </div>
+        <p className="text-xs text-slate-400 py-2">Country information is temporarily unavailable.</p>
+      </div>
+    );
+  }
+
+  const formatVal = (val, fallback = 'Data unavailable') => {
+    if (!val || val === 'null' || val === 'undefined' || val === 'N/A' || val === 'Capital City' || val === 'Information unavailable') {
+      return fallback;
+    }
+    return val;
+  };
+
+  const displayName = formatVal(details.name, 'Selected Territory');
+  const displayCapital = formatVal(details.capital, 'Data unavailable');
+  const displayRegion = formatVal(details.region || details.continent, 'Data unavailable');
+  const displayContinent = formatVal(details.continent, 'Data unavailable');
+  const displayPopulation = formatVal(details.population, 'Data unavailable');
+  const displayArea = formatVal(details.area, 'Data unavailable');
+  const displayCurrency = formatVal(details.currency, 'Data unavailable');
+  const displayLanguage = formatVal(details.language, 'Data unavailable');
 
   // Header Pointer Down for DRAGGING
   const handleHeaderPointerDown = (e) => {
@@ -306,12 +355,12 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
           {/* Title & Capital */}
           <div className="flex flex-col min-w-0">
             <h2 className="text-sm font-bold text-slate-100 tracking-wide truncate">
-              {details.name}
+              {displayName}
             </h2>
             <p className="text-[10px] text-slate-400 font-mono truncate">
-              {details.officialName && details.officialName !== details.name
+              {details.officialName && details.officialName !== displayName
                 ? details.officialName
-                : (details.capital && details.capital !== 'Capital City' ? details.capital : details.continent)}
+                : (displayCapital !== 'Data unavailable' ? displayCapital : displayContinent)}
             </p>
           </div>
         </div>
@@ -321,7 +370,7 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
           onPointerDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
           onClick={handleClose}
-          className="p-1 text-slate-400 hover:text-slate-100 transition-colors rounded hover:bg-slate-800 cursor-pointer shrink-0 text-xs"
+          className="p-1.5 text-slate-400 hover:text-slate-100 transition-colors rounded hover:bg-slate-800 cursor-pointer shrink-0 text-xs min-w-[28px] min-h-[28px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none"
           title="Close window"
           aria-label="Close panel"
         >
@@ -339,9 +388,9 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
               Capital
             </span>
             <span className="text-slate-200 font-semibold truncate text-[11px]">
-              {details.capital || 'N/A'}
+              {displayCapital}
             </span>
-            {details.capitalLat !== undefined && details.capitalLon !== undefined && details.capitalLat !== 0 && (
+            {details.capitalLat !== undefined && details.capitalLon !== undefined && !isNaN(details.capitalLat) && !isNaN(details.capitalLon) && details.capitalLat !== 0 && (
               <span className="text-[9px] text-slate-400 font-mono leading-none truncate">
                 {Math.abs(details.capitalLat).toFixed(1)}°{details.capitalLat >= 0 ? 'N' : 'S'}, {Math.abs(details.capitalLon).toFixed(1)}°{details.capitalLon >= 0 ? 'E' : 'W'}
               </span>
@@ -354,10 +403,10 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
               Region
             </span>
             <span className="text-slate-200 font-semibold truncate text-[11px]">
-              {details.region || details.continent}
+              {displayRegion}
             </span>
             <span className="text-[9px] text-slate-400 font-mono leading-none truncate">
-              {details.continent}
+              {displayContinent}
             </span>
           </div>
         </div>
@@ -370,7 +419,7 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
               Population
             </span>
             <span className="text-slate-100 font-mono font-semibold text-[11px] truncate">
-              {details.population}
+              {displayPopulation}
             </span>
           </div>
 
@@ -380,7 +429,7 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
               Area
             </span>
             <span className="text-slate-100 font-mono font-semibold text-[11px] truncate">
-              {details.area}
+              {displayArea}
             </span>
           </div>
         </div>
@@ -393,7 +442,7 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
               Currency
             </span>
             <span className="text-slate-200 font-semibold text-[11px] truncate">
-              {details.currency}
+              {displayCurrency}
             </span>
           </div>
 
@@ -403,7 +452,7 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
               Language
             </span>
             <span className="text-slate-200 font-semibold text-[11px] truncate">
-              {details.language}
+              {displayLanguage}
             </span>
           </div>
         </div>
@@ -431,8 +480,9 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
                             onSelectCountry(nFeat);
                           }
                         }}
-                        className="px-1.5 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded text-[10px] text-sky-200/90 hover:text-sky-100 font-medium cursor-pointer transition-colors"
+                        className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded text-[10px] text-sky-200/90 hover:text-sky-100 font-medium cursor-pointer transition-colors min-h-[28px] flex items-center focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none"
                         title={`Select ${nName}`}
+                        aria-label={`Select ${nName}`}
                       >
                         {nName}
                       </button>
@@ -453,10 +503,10 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
       <div
         onPointerDown={handleResizePointerDown}
         onTouchStart={handleResizePointerDown}
-        className="absolute bottom-0 right-0 w-5 h-5 flex items-end justify-end p-0.5 cursor-nwse-resize select-none touch-none text-slate-600 hover:text-slate-400 transition-colors z-20"
+        className="absolute bottom-0 right-0 w-7 h-7 sm:w-5 sm:h-5 flex items-end justify-end p-1 sm:p-0.5 cursor-nwse-resize select-none touch-none text-slate-600 hover:text-slate-400 transition-colors z-20"
         title="Drag corner to resize window"
       >
-        <svg className="w-3 h-3" viewBox="0 0 16 16" fill="currentColor">
+        <svg className="w-3.5 h-3.5 sm:w-3 sm:h-3" viewBox="0 0 16 16" fill="currentColor">
           <path d="M14 14H11V12H14V14ZM14 10H8V8H14V10ZM14 6H5V4H14V6Z" opacity="0.6" />
         </svg>
       </div>
