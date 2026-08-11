@@ -96,13 +96,33 @@ export function latLonToVector3(lat, lon, radius = 2.002) {
 }
 
 /**
+ * Mutates an existing THREE.Vector3 with lat/lon Cartesian coordinates to avoid per-frame allocations.
+ * @param {THREE.Vector3} targetVector
+ * @param {number} lat
+ * @param {number} lon
+ * @param {number} radius
+ * @returns {THREE.Vector3}
+ */
+export function setVector3FromLatLon(targetVector, lat, lon, radius = 2.002) {
+  const phi = (90 - lat) * (Math.PI / 180);
+  const theta = (lon + 180) * (Math.PI / 180);
+
+  targetVector.x = -radius * Math.cos(theta) * Math.sin(phi);
+  targetVector.y = radius * Math.cos(phi);
+  targetVector.z = radius * Math.sin(theta) * Math.sin(phi);
+
+  return targetVector;
+}
+
+/**
  * Converts 3D sphere coordinate vector back to { lat, lon }.
  * @param {THREE.Vector3} v3
  * @param {number} radius
+ * @param {THREE.Vector3} [scratchNorm] - Optional pre-allocated vector to prevent allocation
  * @returns {{ lat: number, lon: number }}
  */
-export function vector3ToLatLon(v3, radius = 2.0) {
-  const norm = v3.clone().normalize();
+export function vector3ToLatLon(v3, radius = 2.0, scratchNorm = null) {
+  const norm = scratchNorm ? scratchNorm.copy(v3).normalize() : v3.clone().normalize();
   const phi = Math.acos(Math.max(-1, Math.min(1, norm.y)));
   const lat = 90 - (phi * 180 / Math.PI);
   const theta = Math.atan2(norm.z, -norm.x);
@@ -115,9 +135,11 @@ export function vector3ToLatLon(v3, radius = 2.0) {
 /**
  * Calculates the real-time 3D direction vector pointing towards the Sun in Earth coordinates
  * based on current UTC time and solar declination.
+ * @param {Date|null} [overrideDate]
+ * @param {THREE.Vector3|null} [targetVector] - Reusable vector target to prevent per-frame garbage creation
  * @returns {THREE.Vector3} Unit vector pointing to current subsolar position on Earth
  */
-export function getRealtimeSunVector(overrideDate = null) {
+export function getRealtimeSunVector(overrideDate = null, targetVector = null) {
   const now = overrideDate instanceof Date && !isNaN(overrideDate.getTime()) ? overrideDate : new Date();
 
   // 1. Current UTC time in decimal hours [0, 24)
@@ -142,6 +164,9 @@ export function getRealtimeSunVector(overrideDate = null) {
   const subsolarLat = 23.44 * Math.sin(((360 / 365.24) * (dayOfYear - 81) * Math.PI) / 180);
 
   // 4. Convert subsolar (lat, lon) to 3D unit vector in Earth's coordinate space
+  if (targetVector) {
+    return setVector3FromLatLon(targetVector, subsolarLat, subsolarLon, 1.0).normalize();
+  }
   return latLonToVector3(subsolarLat, subsolarLon, 1.0).normalize();
 }
 
@@ -543,8 +568,7 @@ export function createCapitalMarkersGroup(features = countryFeatures, earthRadiu
     markerGroup.add(stemMesh);
 
     // 3. Elevated Capital Core Badge at top of stem (z = 0.022)
-    const coreMat = baseCoreMat.clone();
-    const coreMesh = new THREE.Mesh(coreGeom, coreMat);
+    const coreMesh = new THREE.Mesh(coreGeom, baseCoreMat);
     markerGroup.add(coreMesh);
 
     // 4. Elevated Outer Halo Ring at top of stem

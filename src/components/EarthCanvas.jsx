@@ -385,6 +385,8 @@ export default function EarthCanvas({
     const _scratchCamNorm = new THREE.Vector3();
     const _scratchPointNorm = new THREE.Vector3();
     const _scratchProjected = new THREE.Vector3();
+    const _scratchSunDir = new THREE.Vector3();
+    const _scratchSunPos = new THREE.Vector3();
 
     // Cache reduced motion preference to avoid calling window.matchMedia on every frame
     let prefersReducedMotion = false;
@@ -525,10 +527,7 @@ export default function EarthCanvas({
       if (capitalsGroup) {
         capitalsGroup.children.forEach((marker) => {
           marker.visible = false;
-          if (marker.userData?.coreMesh) {
-            marker.userData.coreMesh.material.color.setHex(0x38bdf8);
-            marker.scale.set(1.0, 1.0, 1.0);
-          }
+          marker.scale.set(1.0, 1.0, 1.0);
         });
       }
     };
@@ -631,9 +630,6 @@ export default function EarthCanvas({
             details.capital !== 'No officially designated capital'
           ) {
             marker.visible = true;
-            if (marker.userData?.coreMesh) {
-              marker.userData.coreMesh.material.color.setHex(0x38bdf8);
-            }
             marker.scale.set(1.2, 1.2, 1.2);
           } else {
             marker.visible = false;
@@ -1114,6 +1110,9 @@ export default function EarthCanvas({
     // 11. requestAnimationFrame Render Loop
     let animationFrameId;
 
+    let lastReportedCoords = { lat: null, lon: null };
+    let lastCapitalLabelState = { visible: false, x: -1, y: -1, capitalName: '' };
+
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
 
@@ -1121,11 +1120,12 @@ export default function EarthCanvas({
       cloudMesh.rotation.y += 0.00015;
 
       // Real-time astronomical subsolar direction calculated from current UTC date and time
-      const currentSunDir = getRealtimeSunVector(simulatedTimeRef.current);
-      mainSunLight.position.copy(currentSunDir).multiplyScalar(20.0);
-      nightLightsUniforms.uSunDirection.value.copy(currentSunDir);
+      getRealtimeSunVector(simulatedTimeRef.current, _scratchSunDir);
+      _scratchSunPos.copy(_scratchSunDir).multiplyScalar(20.0);
+      mainSunLight.position.copy(_scratchSunPos);
+      nightLightsUniforms.uSunDirection.value.copy(_scratchSunDir);
       if (atmosMat.uniforms.uSunDirection) {
-        atmosMat.uniforms.uSunDirection.value.copy(currentSunDir);
+        atmosMat.uniforms.uSunDirection.value.copy(_scratchSunDir);
       }
 
       // Apply subtle inertial rotation velocity from recent drag and decelerate smoothly
@@ -1220,27 +1220,51 @@ export default function EarthCanvas({
               const x = (_scratchProjected.x * 0.5 + 0.5) * rect.width;
               const y = (-_scratchProjected.y * 0.5 + 0.5) * rect.height;
 
-              setCapitalLabel({
-                visible: true,
-                x,
-                y,
-                capitalName: details.capital,
-                countryName: details.name,
-              });
+              if (
+                !lastCapitalLabelState.visible ||
+                Math.abs(x - lastCapitalLabelState.x) > 0.5 ||
+                Math.abs(y - lastCapitalLabelState.y) > 0.5 ||
+                lastCapitalLabelState.capitalName !== details.capital
+              ) {
+                lastCapitalLabelState = { visible: true, x, y, capitalName: details.capital };
+                setCapitalLabel({
+                  visible: true,
+                  x,
+                  y,
+                  capitalName: details.capital,
+                  countryName: details.name,
+                });
+              }
             } else {
-              setCapitalLabel((prev) => (prev.visible ? { ...prev, visible: false } : prev));
+              if (lastCapitalLabelState.visible) {
+                lastCapitalLabelState = { visible: false, x: -1, y: -1, capitalName: '' };
+                setCapitalLabel((prev) => (prev.visible ? { ...prev, visible: false } : prev));
+              }
             }
           } else {
-            setCapitalLabel((prev) => (prev.visible ? { ...prev, visible: false } : prev));
+            if (lastCapitalLabelState.visible) {
+              lastCapitalLabelState = { visible: false, x: -1, y: -1, capitalName: '' };
+              setCapitalLabel((prev) => (prev.visible ? { ...prev, visible: false } : prev));
+            }
           }
         }
       } else {
-        setCapitalLabel((prev) => (prev.visible ? { ...prev, visible: false } : prev));
+        if (lastCapitalLabelState.visible) {
+          lastCapitalLabelState = { visible: false, x: -1, y: -1, capitalName: '' };
+          setCapitalLabel((prev) => (prev.visible ? { ...prev, visible: false } : prev));
+        }
       }
 
       if (onCoordinatesUpdate) {
-        const centerCoords = vector3ToLatLon(camera.position, 2.0);
-        onCoordinatesUpdate(centerCoords);
+        const centerCoords = vector3ToLatLon(camera.position, 2.0, _scratchCamNorm);
+        if (
+          lastReportedCoords.lat === null ||
+          Math.abs(centerCoords.lat - lastReportedCoords.lat) > 0.0001 ||
+          Math.abs(centerCoords.lon - lastReportedCoords.lon) > 0.0001
+        ) {
+          lastReportedCoords = { lat: centerCoords.lat, lon: centerCoords.lon };
+          onCoordinatesUpdate(centerCoords);
+        }
       }
 
       renderer.render(scene, camera);

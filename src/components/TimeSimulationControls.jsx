@@ -2,15 +2,26 @@ import { useState, useEffect } from 'react';
 
 /**
  * User-facing Time Simulation Control Panel
- * Allows users to temporarily simulate solar position and day/night illumination across different dates and times.
+ * Allows users to easily switch between real Current Time and custom Time Simulation
+ * for solar positioning and day/night Earth illumination.
  * Defaults to actual real current system time.
  */
 export default function TimeSimulationControls({ simulatedTime, onSimulateTime }) {
   const [isOpen, setIsOpen] = useState(false);
   const [inputError, setInputError] = useState(null);
+  const [now, setNow] = useState(() => new Date());
 
   // Is simulation mode currently active?
   const isSimulating = simulatedTime instanceof Date && !isNaN(simulatedTime.getTime());
+
+  // Live ticking clock for Current Time mode
+  useEffect(() => {
+    if (isSimulating) return;
+    const interval = setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isSimulating]);
 
   // Close panel on Escape key press
   useEffect(() => {
@@ -24,8 +35,8 @@ export default function TimeSimulationControls({ simulatedTime, onSimulateTime }
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
-  // Active date object: simulated Date or current live system Date
-  const activeDate = isSimulating ? simulatedTime : new Date();
+  // Active date object: simulated Date or live system Date
+  const activeDate = isSimulating ? simulatedTime : now;
 
   // Local date formatted string for input type="date" (YYYY-MM-DD)
   const localYear = activeDate.getFullYear();
@@ -51,7 +62,7 @@ export default function TimeSimulationControls({ simulatedTime, onSimulateTime }
     minute: '2-digit',
   });
 
-  // UTC Time string for telemetry (e.g. "17:30 UTC")
+  // UTC Time string for display (e.g. "17:30 UTC")
   const utcHours = String(activeDate.getUTCHours()).padStart(2, '0');
   const utcMinutes = String(activeDate.getUTCMinutes()).padStart(2, '0');
   const utcDisplayStr = `${utcHours}:${utcMinutes} UTC`;
@@ -83,14 +94,14 @@ export default function TimeSimulationControls({ simulatedTime, onSimulateTime }
     const [h, min] = timeParts;
 
     if (isNaN(y) || isNaN(m) || isNaN(d) || isNaN(h) || isNaN(min)) {
-      setInputError('Invalid date or time entered. Preserving last valid state.');
+      setInputError('Invalid date or time entered.');
       return;
     }
 
     const updatedDate = new Date(y, m - 1, d, h, min, 0);
 
     if (isNaN(updatedDate.getTime())) {
-      setInputError('Invalid date or time entered. Preserving last valid state.');
+      setInputError('Invalid date or time entered.');
       return;
     }
 
@@ -135,44 +146,62 @@ export default function TimeSimulationControls({ simulatedTime, onSimulateTime }
     <div className="fixed top-4 right-4 z-40 font-sans">
       {!isOpen ? (
         /* Compact Badge Button in Top Right Viewport */
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className={`flex items-center gap-2 px-3 py-2 sm:py-1.5 rounded-lg border backdrop-blur-md transition-all shadow-lg cursor-pointer min-h-[36px] sm:min-h-0 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none ${
-            isSimulating
-              ? 'bg-amber-950/85 border-amber-500/70 text-amber-200 hover:bg-amber-900/90 hover:border-amber-400'
-              : 'bg-slate-950/85 border-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-900/90 hover:border-slate-700'
-          }`}
-          title="Open Time Simulation settings"
-          aria-label="Time Simulation settings"
-        >
-          {/* Status Indicator Dot */}
-          <span
-            className={`w-2 h-2 rounded-full shrink-0 ${
-              isSimulating ? 'bg-amber-400 animate-pulse ring-2 ring-amber-400/30' : 'bg-emerald-400'
+        <div className="flex items-center gap-1.5">
+          {/* Quick Return to Current Time Button when Simulating */}
+          {isSimulating && (
+            <button
+              type="button"
+              onClick={handleResetToCurrentTime}
+              className="px-2.5 py-1.5 rounded-lg border border-amber-500/50 bg-amber-950/90 text-amber-200 hover:bg-amber-900 hover:border-amber-400 text-[11px] font-medium backdrop-blur-md shadow-lg cursor-pointer flex items-center gap-1 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none transition-all min-h-[36px] sm:min-h-0"
+              title="Return to real Current Time"
+              aria-label="Return to real Current Time"
+            >
+              <svg className="w-3.5 h-3.5 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span className="hidden sm:inline">Return to Live</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setIsOpen(true)}
+            className={`flex items-center gap-2 px-3 py-2 sm:py-1.5 rounded-lg border backdrop-blur-md transition-all shadow-lg cursor-pointer min-h-[36px] sm:min-h-0 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none ${
+              isSimulating
+                ? 'bg-amber-950/85 border-amber-500/70 text-amber-200 hover:bg-amber-900/90 hover:border-amber-400'
+                : 'bg-slate-950/85 border-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-900/90 hover:border-slate-700'
             }`}
-          />
+            title="Open Time Simulation settings"
+            aria-label="Time Simulation settings"
+          >
+            {/* Status Indicator Dot */}
+            <span
+              className={`w-2 h-2 rounded-full shrink-0 ${
+                isSimulating ? 'bg-amber-400 animate-pulse ring-2 ring-amber-400/30' : 'bg-emerald-400'
+              }`}
+            />
 
-          <div className="flex flex-col text-left">
-            <div className="flex items-center gap-1.5 leading-none">
-              <span className="text-[10px] font-bold tracking-wider uppercase">
-                {isSimulating ? 'Simulated Time' : 'Current Time'}
-              </span>
-              {isSimulating && (
-                <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1 py-0.2 rounded font-mono font-medium">
-                  SIM
+            <div className="flex flex-col text-left">
+              <div className="flex items-center gap-1.5 leading-none">
+                <span className="text-[10px] font-bold tracking-wider uppercase">
+                  {isSimulating ? 'Time Simulation' : 'Current Time'}
                 </span>
-              )}
+                {isSimulating && (
+                  <span className="text-[9px] bg-amber-500/30 text-amber-300 border border-amber-500/40 px-1 py-0.2 rounded font-mono font-bold">
+                    SIM
+                  </span>
+                )}
+              </div>
+              <span className="text-[11px] font-mono text-slate-300 font-medium leading-tight mt-0.5">
+                {dateDisplayStr} &bull; {timeDisplayStr}
+              </span>
             </div>
-            <span className="text-[11px] font-mono text-slate-400 font-medium leading-tight mt-0.5">
-              {dateDisplayStr} &bull; {timeDisplayStr}
-            </span>
-          </div>
 
-          <svg className="w-3.5 h-3.5 text-slate-400 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
+            <svg className="w-3.5 h-3.5 text-slate-400 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
       ) : (
         /* Interactive Time Simulation Control Card */
         <div className="w-80 max-w-[calc(100vw-32px)] bg-slate-950/95 border border-slate-800 rounded-xl p-4 shadow-2xl backdrop-blur-md text-slate-200 flex flex-col gap-3.5 animate-in fade-in duration-150">
@@ -250,10 +279,10 @@ export default function TimeSimulationControls({ simulatedTime, onSimulateTime }
             <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-lg p-2.5 flex items-center justify-between text-xs">
               <div className="flex flex-col">
                 <span className="text-[9px] font-mono text-emerald-400/80 uppercase tracking-wider">
-                  Live Sync
+                  Live Mode
                 </span>
                 <span className="font-semibold text-[11px] text-emerald-300">
-                  REAL CURRENT UTC TIME
+                  REAL CURRENT TIME
                 </span>
               </div>
               <div className="flex flex-col text-right font-mono text-[11px]">
