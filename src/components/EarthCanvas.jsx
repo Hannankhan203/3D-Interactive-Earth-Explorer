@@ -33,7 +33,13 @@ function isSameFeature(f1, f2) {
  * Dedicated Three.js / WebGL Earth Canvas component.
  * Manages full-screen 3D viewport, scene, camera, renderer, animation loop, and cleanup.
  */
-export default function EarthCanvas({ selectedCountry, onCountrySelect, onCoordinatesUpdate, onCountryHover }) {
+export default function EarthCanvas({
+  selectedCountry,
+  onCountrySelect,
+  onCoordinatesUpdate,
+  onCountryHover,
+  simulatedTime = null,
+}) {
   const containerRef = useRef(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [capitalLabel, setCapitalLabel] = useState({ visible: false, x: 0, y: 0, capitalName: '', countryName: '' });
@@ -43,6 +49,11 @@ export default function EarthCanvas({ selectedCountry, onCountrySelect, onCoordi
   const rotateToFeatureRef = useRef(null);
   const selectedCountryRef = useRef(selectedCountry);
   const onCountryHoverRef = useRef(onCountryHover);
+  const simulatedTimeRef = useRef(simulatedTime);
+
+  useEffect(() => {
+    simulatedTimeRef.current = simulatedTime;
+  }, [simulatedTime]);
 
   useEffect(() => {
     selectedCountryRef.current = selectedCountry;
@@ -111,7 +122,7 @@ export default function EarthCanvas({ selectedCountry, onCountrySelect, onCoordi
     const maxAnisotropy = renderer.capabilities.getMaxAnisotropy() || 1;
 
     // 5. Day/Night Lighting environment initialized from real current UTC solar position
-    const initialSunDir = getRealtimeSunVector();
+    const initialSunDir = getRealtimeSunVector(simulatedTimeRef.current);
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.12);
     const mainSunLight = new THREE.DirectionalLight(0xffffff, 2.0);
     mainSunLight.position.copy(initialSunDir).multiplyScalar(20.0);
@@ -791,7 +802,7 @@ export default function EarthCanvas({ selectedCountry, onCountrySelect, onCoordi
       cloudMesh.rotation.y += 0.00015;
 
       // Real-time astronomical subsolar direction calculated from current UTC date and time
-      const currentSunDir = getRealtimeSunVector();
+      const currentSunDir = getRealtimeSunVector(simulatedTimeRef.current);
       mainSunLight.position.copy(currentSunDir).multiplyScalar(20.0);
       nightLightsUniforms.uSunDirection.value.copy(currentSunDir);
       if (atmosMat.uniforms.uSunDirection) {

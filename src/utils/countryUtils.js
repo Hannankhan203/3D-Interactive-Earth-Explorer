@@ -67,8 +67,8 @@ export function vector3ToLatLon(v3, radius = 2.0) {
  * based on current UTC time and solar declination.
  * @returns {THREE.Vector3} Unit vector pointing to current subsolar position on Earth
  */
-export function getRealtimeSunVector() {
-  const now = new Date();
+export function getRealtimeSunVector(overrideDate = null) {
+  const now = overrideDate instanceof Date && !isNaN(overrideDate.getTime()) ? overrideDate : new Date();
 
   // 1. Current UTC time in decimal hours [0, 24)
   const utcHours =

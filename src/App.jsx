@@ -3,6 +3,7 @@ import EarthCanvas from './components/EarthCanvas';
 import CountryInfoPanel from './components/CountryInfoPanel';
 import CountrySearch from './components/CountrySearch';
 import CountryTooltip from './components/CountryTooltip';
+import DevTimeControls from './components/DevTimeControls';
 
 /**
  * Main Application Component
@@ -14,6 +15,7 @@ export default function App() {
   const [hoveredCountry, setHoveredCountry] = useState(null);
   const [coords, setCoords] = useState({ lat: 30.0, lon: 69.5 });
   const [showHint, setShowHint] = useState(true);
+  const [simulatedTime, setSimulatedTime] = useState(null);
 
   // Smoothly fade out interaction hint after 4s or on user interaction
   useEffect(() => {
@@ -46,8 +48,15 @@ export default function App() {
           onCountrySelect={setSelectedCountry}
           onCountryHover={setHoveredCountry}
           onCoordinatesUpdate={setCoords}
+          simulatedTime={simulatedTime}
         />
       </div>
+
+      {/* Developer-only Time Simulation Test Controls */}
+      <DevTimeControls
+        simulatedTime={simulatedTime}
+        onSimulateTime={setSimulatedTime}
+      />
 
       {/* Top Left Floating Identity & Search Overlay */}
       <div className="absolute top-4 left-4 z-30 max-w-[calc(100vw-32px)]">
