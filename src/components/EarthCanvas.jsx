@@ -379,6 +379,20 @@ export default function EarthCanvas({
 
     // 10. Country & Capital Click/Tap Selection Raycasting System
     const raycaster = new THREE.Raycaster();
+    const _scratchRayMouse = new THREE.Vector2();
+    const _scratchHitPointLocal = new THREE.Vector3();
+    const _scratchWorldPos = new THREE.Vector3();
+    const _scratchCamNorm = new THREE.Vector3();
+    const _scratchPointNorm = new THREE.Vector3();
+    const _scratchProjected = new THREE.Vector3();
+
+    // Cache reduced motion preference to avoid calling window.matchMedia on every frame
+    let prefersReducedMotion = false;
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+      prefersReducedMotion = motionQuery.matches;
+    }
+
     let currentHighlightGroup = null;
     let neighborHighlightGroups = [];
     let selectedLocationMarker = null;
@@ -876,7 +890,7 @@ export default function EarthCanvas({
       const rect = domEl.getBoundingClientRect();
       if (!rect.width || !rect.height) return null;
 
-      const mouse = new THREE.Vector2(
+      _scratchRayMouse.set(
         ((clientX - rect.left) / rect.width) * 2 - 1,
         -((clientY - rect.top) / rect.height) * 2 + 1
       );
@@ -884,7 +898,7 @@ export default function EarthCanvas({
       camera.updateMatrixWorld(true);
       earthMesh.updateMatrixWorld(true);
 
-      raycaster.setFromCamera(mouse, camera);
+      raycaster.setFromCamera(_scratchRayMouse, camera);
 
       // 1. Priority 1: Check 3D capital city markers
       if (capitalsGroup) {
@@ -902,8 +916,9 @@ export default function EarthCanvas({
       const intersects = raycaster.intersectObject(earthMesh, false);
       if (intersects.length > 0) {
         const hit = intersects[0];
-        const hitPointLocal = earthMesh.worldToLocal(hit.point.clone());
-        const coords = vector3ToLatLon(hitPointLocal, 2.0);
+        _scratchHitPointLocal.copy(hit.point);
+        earthMesh.worldToLocal(_scratchHitPointLocal);
+        const coords = vector3ToLatLon(_scratchHitPointLocal, 2.0);
         return findCountryAtLonLat(coords.lon, coords.lat) || null;
       }
 
@@ -1160,12 +1175,6 @@ export default function EarthCanvas({
         }
       }
 
-      // Respect reduced motion preference if active
-      const prefersReducedMotion =
-        typeof window !== 'undefined' &&
-        window.matchMedia &&
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
       // Subtle breathing animation for selected country location marker aura ring
       const animTime = Date.now() * 0.001;
       if (selectedLocationMarker) {
@@ -1199,18 +1208,17 @@ export default function EarthCanvas({
           );
 
           if (selectedMarker) {
-            const worldPos = new THREE.Vector3();
-            selectedMarker.getWorldPosition(worldPos);
+            selectedMarker.getWorldPosition(_scratchWorldPos);
 
-            const camNorm = camera.position.clone().normalize();
-            const pointNorm = worldPos.clone().normalize();
-            const dot = pointNorm.dot(camNorm);
+            _scratchCamNorm.copy(camera.position).normalize();
+            _scratchPointNorm.copy(_scratchWorldPos).normalize();
+            const dot = _scratchPointNorm.dot(_scratchCamNorm);
 
             if (dot > 0.08) {
-              const projected = worldPos.clone().project(camera);
+              _scratchProjected.copy(_scratchWorldPos).project(camera);
               const rect = renderer.domElement.getBoundingClientRect();
-              const x = (projected.x * 0.5 + 0.5) * rect.width;
-              const y = (-projected.y * 0.5 + 0.5) * rect.height;
+              const x = (_scratchProjected.x * 0.5 + 0.5) * rect.width;
+              const y = (-_scratchProjected.y * 0.5 + 0.5) * rect.height;
 
               setCapitalLabel({
                 visible: true,

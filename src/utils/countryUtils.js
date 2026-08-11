@@ -27,6 +27,35 @@ if (idx376 !== -1 && idx275 !== -1) {
 const worldGeoJSON = topojson.feature(worldTopology, worldTopology.objects.countries);
 export const countryFeatures = worldGeoJSON.features;
 
+// Pre-calculate geographic bounding boxes [minLon, minLat, maxLon, maxLat] for fast point-in-polygon rejection
+countryFeatures.forEach((feature) => {
+  if (!feature.geometry) return;
+  let minLon = Infinity;
+  let minLat = Infinity;
+  let maxLon = -Infinity;
+  let maxLat = -Infinity;
+
+  const updateBBox = (ring) => {
+    for (let i = 0; i < ring.length; i++) {
+      const lon = ring[i][0];
+      const lat = ring[i][1];
+      if (lon < minLon) minLon = lon;
+      if (lon > maxLon) maxLon = lon;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    }
+  };
+
+  const geom = feature.geometry;
+  if (geom.type === 'Polygon') {
+    geom.coordinates.forEach(updateBBox);
+  } else if (geom.type === 'MultiPolygon') {
+    geom.coordinates.forEach((poly) => poly.forEach(updateBBox));
+  }
+
+  feature._bbox = [minLon, minLat, maxLon, maxLat];
+});
+
 // Pre-calculate neighbor indices map using TopoJSON topology
 const neighborIndicesMap = topojson.neighbors(worldTopology.objects.countries.geometries);
 
@@ -145,6 +174,12 @@ function pointInPolygonCoords(lon, lat, polygonCoords) {
   return true;
 }
 
+function inFeatureBBox(lon, lat, bbox) {
+  if (!bbox) return true;
+  if (bbox[2] - bbox[0] > 180) return true; // skip bbox test for wrapping features
+  return lon >= bbox[0] && lon <= bbox[2] && lat >= bbox[1] && lat <= bbox[3];
+}
+
 /**
  * Finds the country GeoJSON feature located at a given (lon, lat).
  * Strictly tests the exact coordinate first before micro-testing coastal gaps.
@@ -157,8 +192,10 @@ export function findCountryAtLonLat(lon, lat) {
   while (nLon < -180) nLon += 360;
   while (nLon > 180) nLon -= 360;
 
-  // 1. Exact point-in-polygon test
+  // 1. Exact point-in-polygon test with bounding box fast rejection
   for (const feature of countryFeatures) {
+    if (!inFeatureBBox(nLon, lat, feature._bbox)) continue;
+
     const geom = feature.geometry;
     if (!geom) continue;
 
@@ -180,6 +217,8 @@ export function findCountryAtLonLat(lon, lat) {
     const pLon = nLon + dLon;
     const pLat = lat + dLat;
     for (const feature of countryFeatures) {
+      if (!inFeatureBBox(pLon, pLat, feature._bbox)) continue;
+
       const geom = feature.geometry;
       if (!geom) continue;
 
@@ -430,6 +469,56 @@ export function createCapitalMarkersGroup(features = countryFeatures, earthRadiu
   const group = new THREE.Group();
   group.name = 'capitalMarkersGroup';
 
+  // Shared Geometries to avoid allocating hundreds of duplicate geometries in VRAM
+  const groundGeom = new THREE.RingGeometry(0.008, 0.014, 16);
+
+  const stemGeom = new THREE.CylinderGeometry(0.0012, 0.0012, 0.022, 8);
+  stemGeom.rotateX(Math.PI / 2);
+  stemGeom.translate(0, 0, 0.011);
+
+  const coreGeom = new THREE.SphereGeometry(0.009, 12, 12);
+  coreGeom.translate(0, 0, 0.022);
+
+  const ringGeom = new THREE.RingGeometry(0.012, 0.020, 16);
+  ringGeom.translate(0, 0, 0.022);
+
+  const hitGeom = new THREE.SphereGeometry(0.045, 8, 8);
+
+  // Shared Base Materials
+  const groundMat = new THREE.MeshBasicMaterial({
+    color: 0x0284c7,
+    transparent: true,
+    opacity: 0.6,
+    side: THREE.DoubleSide,
+    depthTest: true,
+    depthWrite: false,
+  });
+
+  const stemMat = new THREE.MeshBasicMaterial({
+    color: 0x38bdf8,
+    transparent: true,
+    opacity: 0.85,
+    depthTest: true,
+    depthWrite: false,
+  });
+
+  const baseCoreMat = new THREE.MeshBasicMaterial({
+    color: 0x7dd3fc, // Vibrant luminous cyan-white
+    depthTest: true,
+    depthWrite: false,
+  });
+
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: 0x0284c7,
+    transparent: true,
+    opacity: 0.8,
+    side: THREE.DoubleSide,
+    depthTest: true,
+    depthWrite: false,
+  });
+
+  const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+
   for (const feature of features) {
     const details = getCountryDetails(feature);
     if (!details || details.capitalLat === undefined || details.capitalLon === undefined) continue;
@@ -446,60 +535,23 @@ export function createCapitalMarkersGroup(features = countryFeatures, earthRadiu
     markerGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
 
     // 1. Surface Ground Ring
-    const groundGeom = new THREE.RingGeometry(0.008, 0.014, 16);
-    const groundMat = new THREE.MeshBasicMaterial({
-      color: 0x0284c7,
-      transparent: true,
-      opacity: 0.6,
-      side: THREE.DoubleSide,
-      depthTest: true,
-      depthWrite: false,
-    });
     const groundMesh = new THREE.Mesh(groundGeom, groundMat);
     markerGroup.add(groundMesh);
 
     // 2. Vertical Pin Stem
-    const stemGeom = new THREE.CylinderGeometry(0.0012, 0.0012, 0.022, 8);
-    stemGeom.rotateX(Math.PI / 2);
-    stemGeom.translate(0, 0, 0.011);
-    const stemMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
-      transparent: true,
-      opacity: 0.85,
-      depthTest: true,
-      depthWrite: false,
-    });
     const stemMesh = new THREE.Mesh(stemGeom, stemMat);
     markerGroup.add(stemMesh);
 
     // 3. Elevated Capital Core Badge at top of stem (z = 0.022)
-    const coreGeom = new THREE.SphereGeometry(0.009, 12, 12);
-    coreGeom.translate(0, 0, 0.022);
-    const coreMat = new THREE.MeshBasicMaterial({
-      color: 0x7dd3fc, // Vibrant luminous cyan-white
-      depthTest: true,
-      depthWrite: false,
-    });
+    const coreMat = baseCoreMat.clone();
     const coreMesh = new THREE.Mesh(coreGeom, coreMat);
     markerGroup.add(coreMesh);
 
     // 4. Elevated Outer Halo Ring at top of stem
-    const ringGeom = new THREE.RingGeometry(0.012, 0.020, 16);
-    ringGeom.translate(0, 0, 0.022);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0x0284c7,
-      transparent: true,
-      opacity: 0.8,
-      side: THREE.DoubleSide,
-      depthTest: true,
-      depthWrite: false,
-    });
     const ringMesh = new THREE.Mesh(ringGeom, ringMat);
     markerGroup.add(ringMesh);
 
     // 5. Invisible Hit Target for comfortable raycast clicking/touching
-    const hitGeom = new THREE.SphereGeometry(0.045, 8, 8);
-    const hitMat = new THREE.MeshBasicMaterial({ visible: false });
     const hitMesh = new THREE.Mesh(hitGeom, hitMat);
     markerGroup.add(hitMesh);
 
