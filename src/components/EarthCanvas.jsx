@@ -17,6 +17,7 @@ import {
   vector3ToLatLon,
   latLonToVector3,
   getFeatureCenter,
+  getRealtimeSunVector,
 } from '../utils/countryUtils';
 import { getCountryDetails } from '../data/countryData';
 
@@ -109,10 +110,11 @@ export default function EarthCanvas({ selectedCountry, onCountrySelect, onCoordi
     // Maximum texture anisotropic filtering for ultra-crisp sampling at angles
     const maxAnisotropy = renderer.capabilities.getMaxAnisotropy() || 1;
 
-    // 5. Day/Night Lighting environment
+    // 5. Day/Night Lighting environment initialized from real current UTC solar position
+    const initialSunDir = getRealtimeSunVector();
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.12);
     const mainSunLight = new THREE.DirectionalLight(0xffffff, 2.0);
-    mainSunLight.position.set(6, 2.5, 5);
+    mainSunLight.position.copy(initialSunDir).multiplyScalar(20.0);
 
     scene.add(ambientLight, mainSunLight);
 
@@ -691,8 +693,18 @@ export default function EarthCanvas({ selectedCountry, onCountrySelect, onCoordi
 
     const onPointerDown = (e) => {
       cancelNavAnimation();
+      // Dynamically adjust OrbitControls rotateSpeed: reduced for controlled, precise touch dragging, standard for desktop mouse
+      if (e.pointerType === 'touch') {
+        controls.rotateSpeed = 0.28;
+      } else {
+        controls.rotateSpeed = 0.75;
+      }
       pointerDownPos = { x: e.clientX, y: e.clientY };
       pointerDownTime = Date.now();
+    };
+
+    const onTouchStart = () => {
+      controls.rotateSpeed = 0.28;
     };
 
     const onPointerUp = (e) => {
@@ -767,6 +779,7 @@ export default function EarthCanvas({ selectedCountry, onCountrySelect, onCoordi
     domElement.addEventListener('pointerup', onPointerUp);
     domElement.addEventListener('pointermove', onPointerMove);
     domElement.addEventListener('pointerleave', onPointerLeave);
+    domElement.addEventListener('touchstart', onTouchStart, { passive: true });
 
     // 11. requestAnimationFrame Render Loop
     let animationFrameId;
@@ -777,8 +790,9 @@ export default function EarthCanvas({ selectedCountry, onCountrySelect, onCoordi
       // Extremely slow, subtle cloud movement independent of Earth surface
       cloudMesh.rotation.y += 0.00015;
 
-      // Keep sun direction uniform aligned with mainSunLight position in world coordinates
-      const currentSunDir = mainSunLight.position.clone().normalize();
+      // Real-time astronomical subsolar direction calculated from current UTC date and time
+      const currentSunDir = getRealtimeSunVector();
+      mainSunLight.position.copy(currentSunDir).multiplyScalar(20.0);
       nightLightsUniforms.uSunDirection.value.copy(currentSunDir);
       if (atmosMat.uniforms.uSunDirection) {
         atmosMat.uniforms.uSunDirection.value.copy(currentSunDir);
@@ -935,6 +949,7 @@ export default function EarthCanvas({ selectedCountry, onCountrySelect, onCoordi
       domElement.removeEventListener('pointerup', onPointerUp);
       domElement.removeEventListener('pointermove', onPointerMove);
       domElement.removeEventListener('pointerleave', onPointerLeave);
+      domElement.removeEventListener('touchstart', onTouchStart);
       if (hoverFrameId) cancelAnimationFrame(hoverFrameId);
       clearSelection();
       activeHoverGroups.forEach((item) => {

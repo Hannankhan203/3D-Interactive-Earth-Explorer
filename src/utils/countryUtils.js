@@ -63,6 +63,39 @@ export function vector3ToLatLon(v3, radius = 2.0) {
 }
 
 /**
+ * Calculates the real-time 3D direction vector pointing towards the Sun in Earth coordinates
+ * based on current UTC time and solar declination.
+ * @returns {THREE.Vector3} Unit vector pointing to current subsolar position on Earth
+ */
+export function getRealtimeSunVector() {
+  const now = new Date();
+
+  // 1. Current UTC time in decimal hours [0, 24)
+  const utcHours =
+    now.getUTCHours() +
+    now.getUTCMinutes() / 60 +
+    now.getUTCSeconds() / 3600 +
+    now.getUTCMilliseconds() / 3600000;
+
+  // 2. Subsolar longitude: At UTC 12:00, Sun is over 0° Greenwich meridian.
+  // Earth rotates eastward; Sun moves westward at 15 degrees per hour.
+  let subsolarLon = (12 - utcHours) * 15;
+  while (subsolarLon > 180) subsolarLon -= 360;
+  while (subsolarLon < -180) subsolarLon += 360;
+
+  // 3. Subsolar latitude (solar declination):
+  // Day of year calculation based on UTC
+  const startOfYear = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+  const dayOfYear = Math.floor((now - startOfYear) / 86400000) + 1;
+
+  // Solar declination ranges from -23.44° (Winter Solstice) to +23.44° (Summer Solstice)
+  const subsolarLat = 23.44 * Math.sin(((360 / 365.24) * (dayOfYear - 81) * Math.PI) / 180);
+
+  // 4. Convert subsolar (lat, lon) to 3D unit vector in Earth's coordinate space
+  return latLonToVector3(subsolarLat, subsolarLon, 1.0).normalize();
+}
+
+/**
  * Checks if a 2D point (lon, lat) is inside a GeoJSON Ring.
  */
 function pointInRing(lon, lat, ring) {
