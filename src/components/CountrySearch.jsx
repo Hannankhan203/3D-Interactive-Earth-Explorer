@@ -258,16 +258,16 @@ const CountrySearch = forwardRef(function CountrySearch({ onSelectCountry, reset
         </button>
       ) : (
         /* Expanded Spatial Command Console Overlay */
-        <div className="fixed inset-x-4 top-16 sm:top-20 sm:left-1/2 sm:-translate-x-1/2 sm:w-[540px] max-w-full bg-[#020617]/95 border border-cyan-500/40 rounded-lg shadow-[0_0_30px_rgba(6,182,212,0.15)] backdrop-blur-2xl p-3 text-slate-200 font-sans animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-x-2 sm:inset-x-4 top-[calc(4.5rem+env(safe-area-inset-top))] sm:top-20 sm:left-1/2 sm:-translate-x-1/2 sm:w-[540px] max-w-[calc(100vw-16px)] max-h-[82vh] flex flex-col bg-[#020617]/95 border border-cyan-500/40 rounded-lg shadow-[0_0_30px_rgba(6,182,212,0.15)] backdrop-blur-2xl p-3 text-slate-200 font-sans animate-in fade-in zoom-in-95 duration-150 z-50">
           {/* Tactical Corner Bracket Accents */}
-          <div className="absolute top-1 left-1 w-2 h-2 border-t border-l border-cyan-400/80" />
-          <div className="absolute top-1 right-1 w-2 h-2 border-t border-r border-cyan-400/80" />
-          <div className="absolute bottom-1 left-1 w-2 h-2 border-b border-l border-cyan-400/80" />
-          <div className="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-cyan-400/80" />
+          <div className="absolute top-1 left-1 w-2 h-2 border-t border-l border-cyan-400/80 pointer-events-none" />
+          <div className="absolute top-1 right-1 w-2 h-2 border-t border-r border-cyan-400/80 pointer-events-none" />
+          <div className="absolute bottom-1 left-1 w-2 h-2 border-b border-l border-cyan-400/80 pointer-events-none" />
+          <div className="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-cyan-400/80 pointer-events-none" />
 
           {/* Search Header Bar */}
-          <div className="flex items-center gap-2 border-b border-slate-800/90 pb-2.5 mb-2">
-            <div className="text-cyan-400 pl-1">
+          <div className="flex items-center gap-2 border-b border-slate-800/90 pb-2.5 mb-2 shrink-0">
+            <div className="text-cyan-400 pl-1 shrink-0">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -281,7 +281,7 @@ const CountrySearch = forwardRef(function CountrySearch({ onSelectCountry, reset
               onKeyDown={handleKeyDown}
               placeholder="Type country name, ISO code, or capital..."
               aria-label="Target search query"
-              className="flex-1 bg-transparent text-sm text-slate-100 placeholder-slate-500 outline-none font-sans"
+              className="flex-1 bg-transparent text-sm text-slate-100 placeholder-slate-500 outline-none font-sans min-w-0"
               autoFocus
             />
 
@@ -289,7 +289,7 @@ const CountrySearch = forwardRef(function CountrySearch({ onSelectCountry, reset
               <button
                 type="button"
                 onClick={() => setQuery('')}
-                className="px-1.5 py-0.5 text-[10px] font-mono text-slate-400 hover:text-slate-200 bg-slate-900 border border-slate-800 rounded"
+                className="px-2 py-1 text-[10px] font-mono text-slate-400 hover:text-slate-200 bg-slate-900 border border-slate-800 rounded cursor-pointer shrink-0"
               >
                 CLEAR
               </button>
@@ -298,14 +298,15 @@ const CountrySearch = forwardRef(function CountrySearch({ onSelectCountry, reset
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 text-xs transition-colors"
+              className="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-800 text-sm transition-colors cursor-pointer shrink-0"
+              aria-label="Close search"
             >
               ✕
             </button>
           </div>
 
           {/* Continent Filter Pills Bar */}
-          <div className="flex items-center justify-between gap-1 overflow-x-auto pb-2 custom-scrollbar">
+          <div className="flex items-center justify-between gap-1 overflow-x-auto pb-2 custom-scrollbar shrink-0">
             <div className="flex items-center gap-1">
               {CONTINENT_OPTIONS.map((opt) => {
                 const isActive = selectedContinent === opt.value;
@@ -317,7 +318,7 @@ const CountrySearch = forwardRef(function CountrySearch({ onSelectCountry, reset
                       setSelectedContinent(opt.value);
                       setSelectedRegion('ALL');
                     }}
-                    className={`px-2 py-1 rounded text-[10px] font-mono font-semibold uppercase tracking-wider whitespace-nowrap transition-all cursor-pointer ${
+                    className={`px-2.5 py-1.5 sm:py-1 rounded text-[10px] font-mono font-semibold uppercase tracking-wider whitespace-nowrap transition-all cursor-pointer ${
                       isActive
                         ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/60 shadow-sm'
                         : 'bg-slate-900/60 text-slate-400 border border-slate-800/80 hover:bg-slate-800 hover:text-slate-200'
@@ -336,7 +337,7 @@ const CountrySearch = forwardRef(function CountrySearch({ onSelectCountry, reset
                   setSelectedContinent('ALL');
                   setSelectedRegion('ALL');
                 }}
-                className="px-2 py-1 text-[9px] font-mono text-amber-400 bg-amber-950/60 border border-amber-800/80 rounded whitespace-nowrap"
+                className="px-2 py-1 text-[9px] font-mono text-amber-400 bg-amber-950/60 border border-amber-800/80 rounded whitespace-nowrap cursor-pointer"
               >
                 RESET
               </button>
@@ -344,7 +345,7 @@ const CountrySearch = forwardRef(function CountrySearch({ onSelectCountry, reset
           </div>
 
           {/* Search Results List */}
-          <div className="max-h-64 overflow-y-auto divide-y divide-slate-800/60 custom-scrollbar mt-1">
+          <div className="flex-1 min-h-0 max-h-[50vh] sm:max-h-64 overflow-y-auto divide-y divide-slate-800/60 custom-scrollbar mt-1">
             {results.length > 0 ? (
               results.map((item, idx) => {
                 const isSelected = idx === activeIndex;
@@ -362,7 +363,7 @@ const CountrySearch = forwardRef(function CountrySearch({ onSelectCountry, reset
                         handleSelect(item);
                       }
                     }}
-                    className={`p-2 flex items-center justify-between cursor-pointer rounded transition-colors ${
+                    className={`p-2.5 sm:p-2 flex items-center justify-between cursor-pointer rounded transition-colors min-h-[44px] ${
                       isSelected
                         ? 'bg-cyan-950/80 text-white border-l-2 border-cyan-400 pl-2.5'
                         : 'hover:bg-slate-900/80 text-slate-300'

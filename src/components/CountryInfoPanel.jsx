@@ -12,8 +12,9 @@ import { getNeighborFeatures } from '../utils/countryUtils';
 export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onClose }) {
   const [imgError, setImgError] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640);
 
-  // Position and Size state
+  // Position and Size state for Desktop
   const [position, setPosition] = useState(null); // { left: number, top: number }
   const [size, setSize] = useState({ width: 380, height: 440 });
 
@@ -22,6 +23,15 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
   const [isVisible, setIsVisible] = useState(false);
 
   const panelRef = useRef(null);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     if (selectedFeature) {
@@ -292,42 +302,59 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
   const currentLeft = position?.left ?? 16;
   const currentTop = position?.top ?? 80;
 
-  return (
-    <div
-      ref={panelRef}
-      onPointerDown={(e) => e.stopPropagation()}
-      onTouchStart={(e) => e.stopPropagation()}
-      onWheel={(e) => e.stopPropagation()}
-      style={{
+  // Mobile Bottom Sheet vs Desktop Floating Window inline styles
+  const panelStyle = isMobile
+    ? {
+        position: 'fixed',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        top: 'auto',
+        width: '100%',
+        maxHeight: '75vh',
+        zIndex: 45,
+      }
+    : {
         position: 'absolute',
         left: `${currentLeft}px`,
         top: `${currentTop}px`,
         width: `${size.width}px`,
         height: `${size.height}px`,
         zIndex: 45,
-      }}
-      className={`bg-[#020617]/95 border border-cyan-500/30 rounded-lg p-3.5 shadow-[0_0_35px_rgba(2,132,199,0.2)] text-slate-200 flex flex-col relative overflow-hidden transition-all duration-150 ease-out font-mono ${
-        isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+      };
+
+  return (
+    <div
+      ref={panelRef}
+      onPointerDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onWheel={(e) => e.stopPropagation()}
+      style={panelStyle}
+      className={`bg-[#020617]/95 border-t sm:border border-cyan-500/40 rounded-t-2xl sm:rounded-lg p-3 sm:p-3.5 shadow-[0_-10px_35px_rgba(2,132,199,0.25)] sm:shadow-[0_0_35px_rgba(2,132,199,0.2)] text-slate-200 flex flex-col relative overflow-hidden transition-all duration-150 ease-out font-mono pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-3.5 ${
+        isVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-6 sm:translate-y-0 sm:scale-95 pointer-events-none'
       } ${
         isDragging || isResizing ? 'select-none border-cyan-400 !transition-none' : ''
       }`}
     >
-      {/* Corner Bracket Accents */}
-      <div className="absolute top-1 left-1 w-2.5 h-2.5 border-t border-l border-cyan-400/80 pointer-events-none" />
-      <div className="absolute top-1 right-1 w-2.5 h-2.5 border-t border-r border-cyan-400/80 pointer-events-none" />
-      <div className="absolute bottom-1 left-1 w-2.5 h-2.5 border-b border-l border-cyan-400/80 pointer-events-none" />
-      <div className="absolute bottom-1 right-1 w-2.5 h-2.5 border-b border-r border-cyan-400/80 pointer-events-none" />
+      {/* Mobile Handle Indicator */}
+      <div className="w-10 h-1 bg-cyan-500/50 rounded-full mx-auto mb-2 shrink-0 sm:hidden" />
+
+      {/* Desktop Corner Bracket Accents */}
+      <div className="hidden sm:block absolute top-1 left-1 w-2.5 h-2.5 border-t border-l border-cyan-400/80 pointer-events-none" />
+      <div className="hidden sm:block absolute top-1 right-1 w-2.5 h-2.5 border-t border-r border-cyan-400/80 pointer-events-none" />
+      <div className="hidden sm:block absolute bottom-1 left-1 w-2.5 h-2.5 border-b border-l border-cyan-400/80 pointer-events-none" />
+      <div className="hidden sm:block absolute bottom-1 right-1 w-2.5 h-2.5 border-b border-r border-cyan-400/80 pointer-events-none" />
 
       {/* Inspector Header */}
       <div
-        onPointerDown={handleHeaderPointerDown}
-        onTouchStart={handleHeaderPointerDown}
-        className={`flex items-center justify-between pb-2.5 border-b border-cyan-900/40 gap-2 select-none touch-none shrink-0 ${
-          isDragging ? 'cursor-grabbing' : 'cursor-grab'
+        onPointerDown={!isMobile ? handleHeaderPointerDown : undefined}
+        onTouchStart={!isMobile ? handleHeaderPointerDown : undefined}
+        className={`flex items-center justify-between pb-2 border-b border-cyan-900/40 gap-2 select-none touch-none shrink-0 ${
+          !isMobile && (isDragging ? 'cursor-grabbing' : 'cursor-grab')
         }`}
-        title="Drag header to position inspector"
+        title={!isMobile ? "Drag header to position inspector" : undefined}
       >
-        <div className="flex items-center gap-2 overflow-hidden pointer-events-none min-w-0">
+        <div className="flex items-center gap-2 overflow-hidden min-w-0">
           {/* Flag */}
           <div className="w-7 h-5 rounded-[2px] border border-cyan-800/80 bg-slate-900 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
             {details?.flagUrl && !imgError ? (
@@ -354,7 +381,7 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
                 </span>
               )}
             </div>
-            <h2 className="text-xs font-bold text-slate-100 truncate tracking-wide font-sans mt-0.5">
+            <h2 className="text-xs sm:text-sm font-bold text-slate-100 truncate tracking-wide font-sans mt-0.5">
               {displayName}
             </h2>
           </div>
@@ -367,7 +394,7 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
             onPointerDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
             onClick={handleShare}
-            className="p-1 text-slate-400 hover:text-cyan-300 transition-colors rounded hover:bg-slate-900/80 cursor-pointer flex items-center gap-1 text-[10px] focus-visible:outline-none"
+            className="p-2 sm:p-1 text-slate-400 hover:text-cyan-300 transition-colors rounded hover:bg-slate-900/80 cursor-pointer flex items-center justify-center min-w-[36px] min-h-[36px] sm:min-w-0 sm:min-h-0 text-[10px] focus-visible:outline-none"
             title="Share territory URL"
             aria-label="Share territory URL"
           >
@@ -376,7 +403,7 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
                 COPIED
               </span>
             ) : (
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
             )}
@@ -387,7 +414,7 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
             onPointerDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
             onClick={handleClose}
-            className="p-1 text-slate-400 hover:text-white transition-colors rounded hover:bg-slate-900 text-xs focus-visible:outline-none"
+            className="p-2 sm:p-1 text-slate-400 hover:text-white transition-colors rounded hover:bg-slate-900 text-sm sm:text-xs flex items-center justify-center min-w-[36px] min-h-[36px] sm:min-w-0 sm:min-h-0 focus-visible:outline-none cursor-pointer"
             title="Close dossier"
             aria-label="Close dossier"
           >
@@ -527,11 +554,11 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
         </div>
       </div>
 
-      {/* Resize Handle Grip */}
+      {/* Resize Handle Grip (Desktop only) */}
       <div
         onPointerDown={handleResizePointerDown}
         onTouchStart={handleResizePointerDown}
-        className="absolute bottom-0 right-0 w-5 h-5 flex items-end justify-end p-0.5 cursor-nwse-resize select-none touch-none text-cyan-600 hover:text-cyan-400 transition-colors z-20"
+        className="hidden sm:flex absolute bottom-0 right-0 w-5 h-5 items-end justify-end p-0.5 cursor-nwse-resize select-none touch-none text-cyan-600 hover:text-cyan-400 transition-colors z-20"
         title="Resize dossier"
       >
         <svg className="w-3 h-3" viewBox="0 0 16 16" fill="currentColor">

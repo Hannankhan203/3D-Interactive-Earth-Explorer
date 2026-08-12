@@ -34,7 +34,7 @@ export default function NavControls({
       <button
         type="button"
         onClick={onZoomIn}
-        className="w-8 h-8 flex items-center justify-center rounded bg-slate-900/60 hover:bg-cyan-950 text-slate-300 hover:text-cyan-200 border border-slate-800 hover:border-cyan-700/80 transition-all cursor-pointer focus-visible:outline-none"
+        className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded bg-slate-900/60 hover:bg-cyan-950 text-slate-300 hover:text-cyan-200 border border-slate-800 hover:border-cyan-700/80 transition-all cursor-pointer focus-visible:outline-none"
         title="Zoom In Camera (+)"
         aria-label="Zoom In Camera"
       >
@@ -47,7 +47,7 @@ export default function NavControls({
       <button
         type="button"
         onClick={onZoomOut}
-        className="w-8 h-8 flex items-center justify-center rounded bg-slate-900/60 hover:bg-cyan-950 text-slate-300 hover:text-cyan-200 border border-slate-800 hover:border-cyan-700/80 transition-all cursor-pointer focus-visible:outline-none"
+        className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded bg-slate-900/60 hover:bg-cyan-950 text-slate-300 hover:text-cyan-200 border border-slate-800 hover:border-cyan-700/80 transition-all cursor-pointer focus-visible:outline-none"
         title="Zoom Out Camera (-)"
         aria-label="Zoom Out Camera"
       >
@@ -62,7 +62,7 @@ export default function NavControls({
       <button
         type="button"
         onClick={onResetView}
-        className="w-8 h-8 flex items-center justify-center rounded bg-slate-900/60 hover:bg-cyan-950 text-cyan-400 hover:text-cyan-200 border border-slate-800 hover:border-cyan-700/80 transition-all cursor-pointer focus-visible:outline-none"
+        className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded bg-slate-900/60 hover:bg-cyan-950 text-cyan-400 hover:text-cyan-200 border border-slate-800 hover:border-cyan-700/80 transition-all cursor-pointer focus-visible:outline-none"
         title="Reset Orbit & Center Pakistan (R)"
         aria-label="Reset Orbit & Center Pakistan"
       >
@@ -77,7 +77,7 @@ export default function NavControls({
         <button
           type="button"
           onClick={onClearSelection}
-          className="w-8 h-8 flex items-center justify-center rounded bg-amber-950/60 hover:bg-amber-900 text-amber-400 hover:text-amber-200 border border-amber-800 transition-all cursor-pointer focus-visible:outline-none"
+          className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded bg-amber-950/60 hover:bg-amber-900 text-amber-400 hover:text-amber-200 border border-amber-800 transition-all cursor-pointer focus-visible:outline-none"
           title="Clear Target Selection (Esc)"
           aria-label="Clear Target Selection"
         >
@@ -92,7 +92,7 @@ export default function NavControls({
         <button
           type="button"
           onClick={onToggleShortcuts}
-          className="w-8 h-8 flex items-center justify-center rounded bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 transition-all cursor-pointer focus-visible:outline-none"
+          className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 transition-all cursor-pointer focus-visible:outline-none"
           title="Control Shortcuts Matrix"
           aria-label="Control Shortcuts Matrix"
         >

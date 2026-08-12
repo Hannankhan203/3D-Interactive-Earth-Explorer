@@ -209,10 +209,10 @@ export default function App() {
       <CountryTooltip hoveredCountry={hoveredCountry} />
 
       {/* Bottom Orbital Telemetry & Navigation Gimbal */}
-      <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-30 flex flex-col items-end gap-2 pointer-events-none font-mono">
+      <div className="absolute bottom-[calc(0.75rem+env(safe-area-inset-bottom))] right-[calc(0.75rem+env(safe-area-inset-right))] z-30 flex flex-col items-end gap-1.5 sm:gap-2 pointer-events-none font-mono">
         {/* Geographic Coordinates HUD Readout */}
-        <div className="px-2.5 py-1 bg-[#020617]/90 border border-cyan-500/30 rounded backdrop-blur-md shadow-lg text-[10px] font-mono text-cyan-300 flex items-center gap-2">
-          <span className="text-slate-500">POS:</span>
+        <div className="px-2 py-0.5 sm:px-2.5 sm:py-1 bg-[#020617]/90 border border-cyan-500/30 rounded backdrop-blur-md shadow-lg text-[9px] sm:text-[10px] font-mono text-cyan-300 flex items-center gap-1.5 sm:gap-2">
+          <span className="text-slate-500 hidden sm:inline">POS:</span>
           <span>
             {Math.abs(coords.lat || 0).toFixed(4)}° {coords.lat >= 0 ? 'N' : 'S'}
           </span>

@@ -148,12 +148,12 @@ export default function TimeSimulationControls({ simulatedTime, onSimulateTime }
 
       {/* Expanded Chrono Instrument Console */}
       {isOpen && (
-        <div className="absolute right-0 top-12 w-80 bg-[#020617]/95 border border-cyan-500/40 rounded-lg p-3.5 shadow-[0_0_30px_rgba(6,182,212,0.15)] backdrop-blur-2xl text-slate-200 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 top-11 sm:top-12 w-[calc(100vw-20px)] sm:w-80 max-w-[320px] bg-[#020617]/95 border border-cyan-500/40 rounded-lg p-3 sm:p-3.5 shadow-[0_0_30px_rgba(6,182,212,0.15)] backdrop-blur-2xl text-slate-200 space-y-3 animate-in fade-in zoom-in-95 duration-150 z-50 max-h-[82vh] overflow-y-auto custom-scrollbar">
           {/* Corner Bracket Accents */}
-          <div className="absolute top-1 left-1 w-2 h-2 border-t border-l border-cyan-400/80" />
-          <div className="absolute top-1 right-1 w-2 h-2 border-t border-r border-cyan-400/80" />
-          <div className="absolute bottom-1 left-1 w-2 h-2 border-b border-l border-cyan-400/80" />
-          <div className="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-cyan-400/80" />
+          <div className="absolute top-1 left-1 w-2 h-2 border-t border-l border-cyan-400/80 pointer-events-none" />
+          <div className="absolute top-1 right-1 w-2 h-2 border-t border-r border-cyan-400/80 pointer-events-none" />
+          <div className="absolute bottom-1 left-1 w-2 h-2 border-b border-l border-cyan-400/80 pointer-events-none" />
+          <div className="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-cyan-400/80 pointer-events-none" />
 
           {/* Instrument Header */}
           <div className="flex items-center justify-between border-b border-slate-800/90 pb-2">
@@ -167,7 +167,7 @@ export default function TimeSimulationControls({ simulatedTime, onSimulateTime }
               <button
                 type="button"
                 onClick={handleReset}
-                className="px-2 py-0.5 text-[9px] font-mono text-cyan-300 bg-cyan-950/80 border border-cyan-800 hover:bg-cyan-900 rounded cursor-pointer transition-colors"
+                className="px-2 py-1 text-[9px] font-mono text-cyan-300 bg-cyan-950/80 border border-cyan-800 hover:bg-cyan-900 rounded cursor-pointer transition-colors"
               >
                 LIVE REALTIME
               </button>
@@ -189,7 +189,7 @@ export default function TimeSimulationControls({ simulatedTime, onSimulateTime }
               value={utcHoursDecimal}
               onChange={(e) => handleHourChange(parseFloat(e.target.value))}
               aria-label="Solar position hours slider"
-              className="w-full accent-cyan-400 bg-slate-900 h-1.5 rounded cursor-pointer"
+              className="w-full accent-cyan-400 bg-slate-900 h-2 sm:h-1.5 rounded cursor-pointer"
             />
 
             <div className="flex justify-between text-[8px] text-slate-500 font-mono pt-0.5">
@@ -204,32 +204,32 @@ export default function TimeSimulationControls({ simulatedTime, onSimulateTime }
             <span className="text-[9px] text-cyan-500 uppercase tracking-wider block">
               SOLAR ILLUMINATION PRESETS
             </span>
-            <div className="grid grid-cols-4 gap-1">
+            <div className="grid grid-cols-2 xs:grid-cols-4 gap-1">
               <button
                 type="button"
                 onClick={() => handlePreset(6)}
-                className="px-1.5 py-1 bg-slate-900/80 hover:bg-cyan-950 border border-slate-800 hover:border-cyan-600 rounded text-[9px] text-slate-300 hover:text-cyan-200 transition-colors cursor-pointer"
+                className="px-1.5 py-2 sm:py-1 bg-slate-900/80 hover:bg-cyan-950 border border-slate-800 hover:border-cyan-600 rounded text-[10px] sm:text-[9px] text-slate-300 hover:text-cyan-200 transition-colors cursor-pointer min-h-[36px] flex items-center justify-center"
               >
                 🌅 SUNRISE
               </button>
               <button
                 type="button"
                 onClick={() => handlePreset(12)}
-                className="px-1.5 py-1 bg-slate-900/80 hover:bg-cyan-950 border border-slate-800 hover:border-cyan-600 rounded text-[9px] text-slate-300 hover:text-cyan-200 transition-colors cursor-pointer"
+                className="px-1.5 py-2 sm:py-1 bg-slate-900/80 hover:bg-cyan-950 border border-slate-800 hover:border-cyan-600 rounded text-[10px] sm:text-[9px] text-slate-300 hover:text-cyan-200 transition-colors cursor-pointer min-h-[36px] flex items-center justify-center"
               >
                 ☀️ NOON
               </button>
               <button
                 type="button"
                 onClick={() => handlePreset(18)}
-                className="px-1.5 py-1 bg-slate-900/80 hover:bg-cyan-950 border border-slate-800 hover:border-cyan-600 rounded text-[9px] text-slate-300 hover:text-cyan-200 transition-colors cursor-pointer"
+                className="px-1.5 py-2 sm:py-1 bg-slate-900/80 hover:bg-cyan-950 border border-slate-800 hover:border-cyan-600 rounded text-[10px] sm:text-[9px] text-slate-300 hover:text-cyan-200 transition-colors cursor-pointer min-h-[36px] flex items-center justify-center"
               >
                 🌇 SUNSET
               </button>
               <button
                 type="button"
                 onClick={() => handlePreset(0)}
-                className="px-1.5 py-1 bg-slate-900/80 hover:bg-cyan-950 border border-slate-800 hover:border-cyan-600 rounded text-[9px] text-slate-300 hover:text-cyan-200 transition-colors cursor-pointer"
+                className="px-1.5 py-2 sm:py-1 bg-slate-900/80 hover:bg-cyan-950 border border-slate-800 hover:border-cyan-600 rounded text-[10px] sm:text-[9px] text-slate-300 hover:text-cyan-200 transition-colors cursor-pointer min-h-[36px] flex items-center justify-center"
               >
                 🌙 MIDNIGHT
               </button>
@@ -244,7 +244,7 @@ export default function TimeSimulationControls({ simulatedTime, onSimulateTime }
               value={formatDateString(activeDate)}
               onChange={(e) => handleDateInput(e.target.value)}
               aria-label="Simulation date input"
-              className="bg-slate-900 border border-slate-800 rounded px-2 py-0.5 text-xs text-cyan-300 font-mono outline-none focus:border-cyan-500 cursor-pointer"
+              className="bg-slate-900 border border-slate-800 rounded px-2 py-1 sm:py-0.5 text-xs text-cyan-300 font-mono outline-none focus:border-cyan-500 cursor-pointer min-h-[36px] sm:min-h-0"
             />
           </div>
         </div>
