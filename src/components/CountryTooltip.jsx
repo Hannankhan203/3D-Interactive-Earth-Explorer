@@ -3,8 +3,7 @@ import { getCountryDetails } from '../data/countryData';
 
 /**
  * CountryTooltip component
- * Renders a compact, dark semi-transparent tooltip near the mouse cursor
- * when a country is hovered on the 3D Earth sphere.
+ * Displays a compact hover badge near the cursor when hovering over a country on the 3D Earth.
  */
 export default function CountryTooltip({ hoveredCountry }) {
   const [pos, setPos] = useState({ x: 0, y: 0 });
@@ -19,7 +18,7 @@ export default function CountryTooltip({ hoveredCountry }) {
 
   useEffect(() => {
     const handlePointerMove = (e) => {
-      // Do not show hover tooltips for touch devices or while dragging (buttons !== 0)
+      // Do not show hover tooltips for touch devices or while dragging
       if (e.pointerType === 'touch' || e.buttons !== 0) {
         setIsVisible(false);
         return;
@@ -63,9 +62,9 @@ export default function CountryTooltip({ hoveredCountry }) {
   let left = pos.x + offset;
   let top = pos.y + offset;
 
-  // Viewport bounds checking to prevent clipping at screen edges
-  const tooltipWidth = 150;
-  const tooltipHeight = 36;
+  // Viewport bounds checking
+  const tooltipWidth = 160;
+  const tooltipHeight = 40;
 
   if (typeof window !== 'undefined') {
     if (left + tooltipWidth > window.innerWidth - 8) {
@@ -82,7 +81,7 @@ export default function CountryTooltip({ hoveredCountry }) {
 
   return (
     <div
-      className={`fixed z-50 pointer-events-none transition-all duration-150 ease-out ${
+      className={`fixed z-50 pointer-events-none transition-all duration-150 ease-out font-sans ${
         isShowing ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
       }`}
       style={{
@@ -90,12 +89,12 @@ export default function CountryTooltip({ hoveredCountry }) {
         top: `${top}px`,
       }}
     >
-      <div className="px-3 py-1.5 bg-slate-950/90 text-slate-100 text-xs font-medium border border-slate-800 rounded-md shadow-xl backdrop-blur-md flex items-center gap-2 whitespace-nowrap">
-        <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
-        <span className="tracking-wide font-sans">{countryName}</span>
+      <div className="px-3 py-1.5 bg-slate-950/90 text-slate-100 text-xs font-medium border border-slate-800/90 rounded-lg shadow-2xl backdrop-blur-xl flex items-center gap-2 whitespace-nowrap">
+        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0 animate-pulse" />
+        <span className="tracking-wide font-semibold text-slate-100">{countryName}</span>
         {capitalName && (
-          <span className="text-slate-400 text-[11px] font-normal font-sans border-l border-slate-800/80 pl-2 ml-0.5">
-            Capital: <span className="text-sky-200/90 font-medium">{capitalName}</span>
+          <span className="text-slate-400 text-[11px] font-normal border-l border-slate-800/80 pl-2 ml-0.5">
+            Capital: <span className="text-cyan-200/90 font-medium">{capitalName}</span>
           </span>
         )}
       </div>

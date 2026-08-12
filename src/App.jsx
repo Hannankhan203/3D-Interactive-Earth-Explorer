@@ -1,21 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import EarthCanvas from './components/EarthCanvas';
 import CountryInfoPanel from './components/CountryInfoPanel';
 import CountrySearch from './components/CountrySearch';
 import CountryTooltip from './components/CountryTooltip';
 import TimeSimulationControls from './components/TimeSimulationControls';
 import NavControls from './components/NavControls';
+import ShortcutsModal from './components/ShortcutsModal';
+import NavHint from './components/NavHint';
 
 /**
- * Main Application Component
- * Immersive 3D Geographic Exploration Interface with full-screen WebGL canvas,
- * understated identity mark, compact geographic search, and subtle telemetry.
+ * Main Application Shell
+ * Immersive 3D Earth Explorer with professional HUD shell,
+ * real-time solar positioning, instant search, draggable telemetry card, and navigation tools.
  */
 export default function App() {
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [hoveredCountry, setHoveredCountry] = useState(null);
   const [coords, setCoords] = useState({ lat: 30.0, lon: 69.5 });
-  const [showHint, setShowHint] = useState(true);
   const [simulatedTime, setSimulatedTime] = useState(null);
   const [resetTrigger, setResetTrigger] = useState(0);
   const [zoomInTrigger, setZoomInTrigger] = useState(0);
@@ -23,10 +24,12 @@ export default function App() {
   const [isEarthReady, setIsEarthReady] = useState(false);
   const [earthError, setEarthError] = useState(null);
   const [showLoadingOverlay, setShowLoadingOverlay] = useState(true);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+
+  const searchRef = useRef(null);
 
   const handleEarthReady = () => {
     setIsEarthReady(true);
-    // Smoothly remove loading overlay after fade transition
     setTimeout(() => {
       setShowLoadingOverlay(false);
     }, 600);
@@ -53,26 +56,32 @@ export default function App() {
     setSelectedCountry(null);
   };
 
-  // Smoothly fade out interaction hint after 4s or on user interaction
+  // Global Keyboard Shortcuts
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowHint(false);
-    }, 4000);
+    const handleKeyDown = (e) => {
+      // Ignore key shortcuts if active element is an input or textarea
+      const tag = document.activeElement?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') {
+        if (e.key === 'Escape') {
+          document.activeElement.blur();
+        }
+        return;
+      }
 
-    const handleInteraction = () => {
-      setShowHint(false);
+      if (e.key === '/') {
+        e.preventDefault();
+        searchRef.current?.focus();
+      } else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        handleResetGlobe();
+      } else if (e.key === 'Escape') {
+        setSelectedCountry(null);
+        setIsShortcutsOpen(false);
+      }
     };
 
-    window.addEventListener('pointerdown', handleInteraction, { passive: true });
-    window.addEventListener('wheel', handleInteraction, { passive: true });
-    window.addEventListener('touchstart', handleInteraction, { passive: true });
-
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('pointerdown', handleInteraction);
-      window.removeEventListener('wheel', handleInteraction);
-      window.removeEventListener('touchstart', handleInteraction);
-    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   return (
@@ -93,7 +102,7 @@ export default function App() {
         />
       </div>
 
-      {/* Minimal Professional Loading & Error Overlay */}
+      {/* Loading & Error Screen Overlay */}
       {showLoadingOverlay && (
         <div
           className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#01040f] text-slate-100 transition-opacity duration-500 ease-out ${
@@ -101,15 +110,14 @@ export default function App() {
           }`}
         >
           {earthError ? (
-            /* Friendly Error State */
-            <div className="max-w-md mx-auto px-6 text-center space-y-4">
+            <div className="max-w-md mx-auto px-6 text-center space-y-4 font-sans">
               <div className="w-12 h-12 mx-auto rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 shadow-lg">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
               </div>
               <h2 className="text-base font-semibold text-slate-100 tracking-wide">
-                Unable to Display 3D Globe
+                Unable to Load 3D Scene
               </h2>
               <p className="text-xs text-slate-400 leading-relaxed">
                 {earthError}
@@ -123,95 +131,66 @@ export default function App() {
               </button>
             </div>
           ) : (
-            /* Minimal Professional Loading State */
-            <div className="flex flex-col items-center gap-4 text-center px-4">
+            <div className="flex flex-col items-center gap-4 text-center px-4 font-sans">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                <h1 className="text-sm font-semibold tracking-widest uppercase text-slate-200 font-sans">
-                  3D Interactive Earth
+                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+                <h1 className="text-sm font-bold tracking-widest uppercase text-slate-200">
+                  Earth Explorer
                 </h1>
               </div>
 
-              <div className="flex items-center gap-2.5 text-xs text-slate-400 font-sans">
+              <div className="flex items-center gap-2.5 text-xs text-slate-400">
                 <div className="w-4 h-4 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
-                <span>Loading Earth...</span>
+                <span>Loading 3D Globe...</span>
               </div>
             </div>
           )}
         </div>
       )}
 
-      {/* Minimal Geographic Navigation Controls */}
-      <NavControls
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onResetView={handleResetGlobe}
-        onClearSelection={handleClearSelection}
-        hasSelection={Boolean(selectedCountry)}
-      />
-
-      {/* Permanent User-Facing Time Simulation Controls */}
-      <TimeSimulationControls
-        simulatedTime={simulatedTime}
-        onSimulateTime={setSimulatedTime}
-      />
-
-      {/* Top Left Floating Identity & Search Overlay */}
-      <div className="absolute top-4 left-4 z-30 max-w-[calc(100vw-32px)]">
-        <div className="flex flex-col gap-2">
-          {/* Understated Identity Label & Unobtrusive Reset Control */}
-          <div className="flex items-center justify-between pl-0.5 gap-3">
-            <div className="flex items-center gap-2 pointer-events-none">
-              <span className="w-1 h-1 rounded-full bg-cyan-400/80 shrink-0" />
-              <span className="text-[11px] font-semibold tracking-wider text-slate-300 uppercase font-sans">
-                Earth Explorer
-              </span>
-            </div>
-
-            {/* Reset / Clear Control */}
-            <button
-              type="button"
-              onClick={handleResetGlobe}
-              className="flex items-center gap-1 px-2.5 py-1 sm:px-2 sm:py-0.5 bg-slate-950/80 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded text-[10px] font-medium text-slate-400 hover:text-slate-200 transition-colors cursor-pointer backdrop-blur-md shadow-sm min-h-[28px] sm:min-h-0 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none"
-              title="Reset view and clear selection"
-              aria-label="Reset view and clear selection"
-            >
-              <svg className="w-3 h-3 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span>Reset View</span>
-            </button>
+      {/* Top Application Header Bar */}
+      <header className="absolute top-3 left-3 right-3 sm:top-4 sm:left-4 sm:right-4 z-30 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
+        {/* Left: Brand Identity & Search Bar */}
+        <div className="flex items-center gap-3 pointer-events-auto">
+          {/* Brand Mark */}
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-950/85 border border-slate-800/80 rounded-lg backdrop-blur-md shadow-lg">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="text-xs font-bold tracking-wider text-slate-200 uppercase">
+              Earth Explorer
+            </span>
           </div>
 
-          {/* Compact Geographic Search Interface */}
-          <CountrySearch onSelectCountry={setSelectedCountry} resetTrigger={resetTrigger} />
+          {/* Search Component */}
+          <CountrySearch
+            ref={searchRef}
+            onSelectCountry={setSelectedCountry}
+            resetTrigger={resetTrigger}
+          />
         </div>
-      </div>
 
-      {/* Contextual Country Information Panel */}
+        {/* Right: Time & Solar Simulation Controls */}
+        <div className="pointer-events-auto ml-auto">
+          <TimeSimulationControls
+            simulatedTime={simulatedTime}
+            onSimulateTime={setSimulatedTime}
+          />
+        </div>
+      </header>
+
+      {/* Floating Geographic Information Card */}
       <CountryInfoPanel
         selectedFeature={selectedCountry}
         onSelectCountry={setSelectedCountry}
         onClose={() => setSelectedCountry(null)}
       />
 
-      {/* Hover Country Tooltip */}
+      {/* Country Hover Badge Tooltip */}
       <CountryTooltip hoveredCountry={hoveredCountry} />
 
-      {/* Bottom Left Navigation Hint (Fades Out) */}
-      <div
-        className={`absolute bottom-3 left-3 sm:bottom-4 sm:left-4 z-20 pointer-events-none transition-opacity duration-700 ease-out ${
-          showHint ? 'opacity-100' : 'opacity-0'
-        }`}
-      >
-        <p className="text-[10px] font-sans text-slate-400/70 tracking-wide">
-          Drag to rotate &bull; Pinch / Scroll to zoom
-        </p>
-      </div>
-
-      {/* Bottom Right Telemetry */}
-      <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-20 pointer-events-none">
-        <div className="text-[10px] font-mono text-slate-400/90 tracking-wide flex items-center gap-1.5">
+      {/* Bottom Floating Navigation Toolbar & Coordinates HUD */}
+      <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-30 flex flex-col items-end gap-2 pointer-events-none">
+        {/* Geographic Coordinates HUD */}
+        <div className="px-2.5 py-1 bg-slate-950/80 border border-slate-800/80 rounded-lg backdrop-blur-md shadow-lg text-[10px] font-mono text-slate-300 flex items-center gap-1.5">
           <span>
             {Math.abs(coords.lat || 0).toFixed(4)}° {coords.lat >= 0 ? 'N' : 'S'}
           </span>
@@ -220,9 +199,28 @@ export default function App() {
             {Math.abs(coords.lon || 0).toFixed(4)}° {coords.lon >= 0 ? 'E' : 'W'}
           </span>
         </div>
+
+        {/* Navigation Control Buttons */}
+        <div className="pointer-events-auto">
+          <NavControls
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onResetView={handleResetGlobe}
+            onClearSelection={handleClearSelection}
+            onToggleShortcuts={() => setIsShortcutsOpen(true)}
+            hasSelection={Boolean(selectedCountry)}
+          />
+        </div>
       </div>
+
+      {/* First-Time User Interaction Hint */}
+      <NavHint />
+
+      {/* Keyboard Shortcuts Dialog Modal */}
+      <ShortcutsModal
+        isOpen={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
+      />
     </div>
   );
 }
-
-
