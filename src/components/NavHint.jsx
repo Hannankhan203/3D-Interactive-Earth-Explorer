@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 /**
- * First-Time User Navigation Hint
- * Displays a subtle, non-intrusive floating hint at the bottom left.
- * Automatically fades out after 8 seconds or when dismissed.
+ * Spatial Telemetry Guidance Hint
+ * Rebuilt interaction hint for first-time operators.
  */
 export default function NavHint() {
   const [visible, setVisible] = useState(true);
@@ -14,7 +13,6 @@ export default function NavHint() {
       setVisible(false);
     }, 8000);
 
-    // Dismiss on user interaction with globe
     const handlePointerDown = () => {
       setVisible(false);
     };
@@ -31,18 +29,18 @@ export default function NavHint() {
 
   return (
     <div
-      className="fixed bottom-12 left-4 z-30 pointer-events-auto transition-opacity duration-300 font-sans"
+      className="fixed bottom-12 left-4 z-30 pointer-events-auto transition-opacity duration-300 font-mono"
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-950/85 border border-slate-800/80 rounded-lg shadow-xl backdrop-blur-md text-[11px] text-slate-300">
+      <div className="flex items-center gap-2.5 px-3 py-1.5 bg-[#020617]/90 border border-cyan-500/30 rounded shadow-xl backdrop-blur-md text-[10px] text-slate-300 relative">
         <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-        <span>Drag to rotate &bull; Scroll or pinch to zoom</span>
+        <span className="font-sans">DRAG TO ROTATE &bull; SCROLL / PINCH TO ZOOM</span>
         <button
           type="button"
           onClick={() => setVisible(false)}
           className="ml-1 text-slate-500 hover:text-slate-300 transition-colors"
-          title="Dismiss navigation help"
-          aria-label="Dismiss navigation help"
+          title="Dismiss guidance"
+          aria-label="Dismiss guidance"
         >
           ✕
         </button>

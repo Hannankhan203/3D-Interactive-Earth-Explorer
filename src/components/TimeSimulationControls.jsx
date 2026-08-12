@@ -1,377 +1,252 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 /**
- * User-facing Time Simulation Control Panel
- * Allows users to easily switch between real Current Time and custom Time Simulation
- * for solar positioning and day/night Earth illumination.
+ * Astronomical Chrono Instrument
+ * Complete UI rebuild: A specialized solar time instrument for calculating
+ * subsolar positioning, real-time day/night lighting, solar hour scrubbing,
+ * solar position presets (Noon, Sunset, Midnight, Sunrise), and date simulation.
  */
 export default function TimeSimulationControls({ simulatedTime, onSimulateTime }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [inputError, setInputError] = useState(null);
-  const [now, setNow] = useState(() => new Date());
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Is simulation mode currently active?
-  const isSimulating = simulatedTime instanceof Date && !isNaN(simulatedTime.getTime());
+  const containerRef = useRef(null);
 
-  // Live ticking clock for Current Time mode
+  // Update real-time ticker every second
   useEffect(() => {
-    if (isSimulating) return;
-    const interval = setInterval(() => {
-      setNow(new Date());
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
     }, 1000);
-    return () => clearInterval(interval);
-  }, [isSimulating]);
+    return () => clearInterval(timer);
+  }, []);
 
-  // Close panel on Escape key press
+  // Handle outside click to close popover
   useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
         setIsOpen(false);
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
 
-  // Active date object: simulated Date or live system Date
-  const activeDate = isSimulating ? simulatedTime : now;
+  const activeDate = simulatedTime instanceof Date && !isNaN(simulatedTime.getTime())
+    ? simulatedTime
+    : currentTime;
 
-  // Local date formatted string for input type="date" (YYYY-MM-DD)
-  const localYear = activeDate.getFullYear();
-  const localMonth = String(activeDate.getMonth() + 1).padStart(2, '0');
-  const localDay = String(activeDate.getDate()).padStart(2, '0');
-  const dateInputVal = `${localYear}-${localMonth}-${localDay}`;
+  const isSimulated = Boolean(simulatedTime);
 
-  // Local time formatted string for input type="time" (HH:MM)
-  const localHours = String(activeDate.getHours()).padStart(2, '0');
-  const localMinutes = String(activeDate.getMinutes()).padStart(2, '0');
-  const timeInputVal = `${localHours}:${localMinutes}`;
+  // Compute UTC Hours (0-24)
+  const utcHoursDecimal =
+    activeDate.getUTCHours() +
+    activeDate.getUTCMinutes() / 60 +
+    activeDate.getUTCSeconds() / 3600;
 
-  // Formatted date string for display (e.g. "11 Aug 2026")
-  const dateDisplayStr = activeDate.toLocaleDateString(undefined, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-
-  // Formatted time string for display (e.g. "2:30 PM")
-  const timeDisplayStr = activeDate.toLocaleTimeString(undefined, {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-
-  // UTC Time string for display (e.g. "17:30 UTC")
-  const utcHours = String(activeDate.getUTCHours()).padStart(2, '0');
-  const utcMinutes = String(activeDate.getUTCMinutes()).padStart(2, '0');
-  const utcDisplayStr = `${utcHours}:${utcMinutes} UTC`;
-
-  // Quick time of day presets
-  const PRESETS = [
-    { label: 'Solar Noon', hour: 12, min: 0, tag: '☀️ Daylight', icon: '☀️' },
-    { label: 'Sunset', hour: 18, min: 0, tag: '🌅 Sunset', icon: '🌅' },
-    { label: 'Midnight', hour: 0, min: 0, tag: '🌙 Night', icon: '🌙' },
-    { label: 'Sunrise', hour: 6, min: 0, tag: '🌅 Sunrise', icon: '🌅' },
-  ];
-
-  // Helper to update simulated date/time with strict validation
-  const updateSimulatedDateTime = (newDateStr, newTimeStr) => {
-    if (!newDateStr || !newTimeStr) {
-      setInputError('Please enter a valid date and time.');
-      return;
-    }
-
-    const dateParts = newDateStr.split('-').map(Number);
-    const timeParts = newTimeStr.split(':').map(Number);
-
-    if (dateParts.length < 3 || timeParts.length < 2) {
-      setInputError('Please enter a complete date and time.');
-      return;
-    }
-
-    const [y, m, d] = dateParts;
-    const [h, min] = timeParts;
-
-    if (isNaN(y) || isNaN(m) || isNaN(d) || isNaN(h) || isNaN(min)) {
-      setInputError('Invalid date or time entered.');
-      return;
-    }
-
-    const updatedDate = new Date(y, m - 1, d, h, min, 0);
-
-    if (isNaN(updatedDate.getTime())) {
-      setInputError('Invalid date or time entered.');
-      return;
-    }
-
-    if (y < 1000 || y > 3000) {
-      setInputError('Year must be between 1000 and 3000.');
-      return;
-    }
-
-    setInputError(null);
-    onSimulateTime(updatedDate);
+  // Format UTC string
+  const formatUtcString = (d) => {
+    const hrs = String(d.getUTCHours()).padStart(2, '0');
+    const mins = String(d.getUTCMinutes()).padStart(2, '0');
+    const secs = String(d.getUTCSeconds()).padStart(2, '0');
+    return `${hrs}:${mins}:${secs} UTC`;
   };
 
-  const handleDateChange = (e) => {
-    updateSimulatedDateTime(e.target.value, timeInputVal);
+  // Format Date string
+  const formatDateString = (d) => {
+    return d.toISOString().split('T')[0];
   };
 
-  const handleTimeChange = (e) => {
-    updateSimulatedDateTime(dateInputVal, e.target.value);
+  // Set hour on active date
+  const handleHourChange = (newDecimalHours) => {
+    const base = new Date(activeDate);
+    const h = Math.floor(newDecimalHours);
+    const m = Math.floor((newDecimalHours - h) * 60);
+    const s = Math.floor(((newDecimalHours - h) * 60 - m) * 60);
+
+    base.setUTCHours(h, m, s, 0);
+    onSimulateTime(base);
   };
 
-  const handleSliderChange = (e) => {
-    const hourVal = parseInt(e.target.value, 10);
-    const formattedHour = String(hourVal).padStart(2, '0');
-    updateSimulatedDateTime(dateInputVal, `${formattedHour}:${localMinutes}`);
+  // Solar Presets
+  const handlePreset = (targetUtcHours) => {
+    const base = new Date(activeDate);
+    base.setUTCHours(targetUtcHours, 0, 0, 0);
+    onSimulateTime(base);
   };
 
-  const handleApplyPreset = (presetHour, presetMin = 0) => {
-    const formattedHour = String(presetHour).padStart(2, '0');
-    const formattedMin = String(presetMin).padStart(2, '0');
-    updateSimulatedDateTime(dateInputVal, `${formattedHour}:${formattedMin}`);
+  // Handle Date picker change
+  const handleDateInput = (dateStr) => {
+    if (!dateStr) return;
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const base = new Date(activeDate);
+    base.setUTCFullYear(year, month - 1, day);
+    onSimulateTime(base);
   };
 
-  const handleResetToCurrentTime = () => {
-    setInputError(null);
+  // Reset to live real-time
+  const handleReset = () => {
     onSimulateTime(null);
   };
 
-  // Keep active local hours for slider
-  const sliderHourVal = activeDate.getHours();
+  // Sun Phase Status (based on UTC decimal hours)
+  let solarPhase = 'DAYLIGHT';
+  let solarIcon = '☀️';
+  if (utcHoursDecimal >= 5 && utcHoursDecimal < 7) {
+    solarPhase = 'SUNRISE';
+    solarIcon = '🌅';
+  } else if (utcHoursDecimal >= 7 && utcHoursDecimal < 17) {
+    solarPhase = 'SOLAR DAY';
+    solarIcon = '☀️';
+  } else if (utcHoursDecimal >= 17 && utcHoursDecimal < 19) {
+    solarPhase = 'SUNSET';
+    solarIcon = '🌇';
+  } else {
+    solarPhase = 'NIGHT';
+    solarIcon = '🌙';
+  }
 
   return (
-    <div className="font-sans">
-      {!isOpen ? (
-        /* Compact Badge Button */
-        <div className="flex items-center gap-1.5">
-          {/* Quick Return to Current Time Button when Simulating */}
-          {isSimulating && (
-            <button
-              type="button"
-              onClick={handleResetToCurrentTime}
-              className="px-2.5 py-1.5 rounded-lg border border-amber-500/50 bg-amber-950/90 text-amber-200 hover:bg-amber-900 hover:border-amber-400 text-xs font-medium backdrop-blur-md shadow-lg cursor-pointer flex items-center gap-1 focus-visible:outline-none transition-all"
-              title="Return to real Current Time"
-              aria-label="Return to real Current Time"
-            >
-              <svg className="w-3.5 h-3.5 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span className="hidden sm:inline">Reset Time</span>
-            </button>
-          )}
+    <div ref={containerRef} className="relative z-40 font-mono">
+      {/* Compact Chrono Trigger Button */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`group flex items-center gap-2.5 px-3 py-2 rounded-md border backdrop-blur-md shadow-xl transition-all cursor-pointer select-none text-xs ${
+          isSimulated
+            ? 'bg-amber-950/90 text-amber-300 border-amber-600/70 hover:border-amber-400'
+            : 'bg-[#020617]/90 text-slate-300 border-cyan-900/40 hover:border-cyan-500/50 hover:text-white'
+        }`}
+        title="Astronomical Time Instrument"
+        aria-label="Astronomical Time Instrument"
+      >
+        <span className="text-sm leading-none">{solarIcon}</span>
 
-          <button
-            type="button"
-            onClick={() => setIsOpen(true)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border backdrop-blur-md transition-all shadow-lg cursor-pointer focus-visible:outline-none ${
-              isSimulating
-                ? 'bg-amber-950/85 border-amber-500/70 text-amber-200 hover:bg-amber-900/90'
-                : 'bg-slate-950/85 border-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-900/90'
-            }`}
-            title="Open Time Simulation controls"
-            aria-label="Time Simulation controls"
-          >
-            {/* Status Indicator Dot */}
-            <span
-              className={`w-2 h-2 rounded-full shrink-0 ${
-                isSimulating ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'
-              }`}
-            />
-
-            <div className="flex flex-col text-left">
-              <div className="flex items-center gap-1.5 leading-none">
-                <span className="text-[10px] font-bold tracking-wider uppercase">
-                  {isSimulating ? 'Time Simulation' : 'Live Solar Time'}
-                </span>
-                {isSimulating && (
-                  <span className="text-[9px] bg-amber-500/30 text-amber-300 border border-amber-500/40 px-1 py-0.2 rounded font-mono font-bold">
-                    SIM
-                  </span>
-                )}
-              </div>
-              <span className="text-[11px] font-mono text-slate-300 font-medium leading-tight mt-0.5">
-                {dateDisplayStr} &bull; {timeDisplayStr}
-              </span>
-            </div>
-
-            <svg className="w-3.5 h-3.5 text-slate-400 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-        </div>
-      ) : (
-        /* Interactive Time Simulation Control Card */
-        <div className="w-80 max-w-[calc(100vw-32px)] bg-slate-950/95 border border-slate-800/90 rounded-xl p-3.5 shadow-2xl backdrop-blur-xl text-slate-200 flex flex-col gap-3 font-sans">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-            <div className="flex items-center gap-2">
-              <span
-                className={`w-2.5 h-2.5 rounded-full ${
-                  isSimulating ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'
-                }`}
-              />
-              <div className="flex flex-col">
-                <span className="text-xs font-bold tracking-wide text-slate-100">
-                  Time & Solar Illumination
-                </span>
-                <span className="text-[10px] text-slate-400">
-                  Adjust Earth day/night lighting
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="p-1 text-slate-400 hover:text-slate-200 rounded-md hover:bg-slate-800/80 text-xs transition-colors cursor-pointer focus-visible:outline-none"
-              title="Close panel"
-              aria-label="Close panel"
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Mode Switcher Segment Control */}
-          <div className="grid grid-cols-2 gap-1 bg-slate-900/90 p-1 rounded-lg border border-slate-800">
-            <button
-              type="button"
-              onClick={handleResetToCurrentTime}
-              className={`py-1.5 px-2 rounded-md text-[11px] font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 focus-visible:outline-none ${
-                !isSimulating
-                  ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 shadow-sm font-semibold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${!isSimulating ? 'bg-emerald-400' : 'bg-slate-600'}`} />
-              <span>Real Time</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (!isSimulating) {
-                  onSimulateTime(new Date());
-                }
-              }}
-              className={`py-1.5 px-2 rounded-md text-[11px] font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 focus-visible:outline-none ${
-                isSimulating
-                  ? 'bg-amber-950/80 text-amber-300 border border-amber-500/50 shadow-sm font-semibold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${isSimulating ? 'bg-amber-400 animate-pulse' : 'bg-slate-600'}`} />
-              <span>Simulated</span>
-            </button>
-          </div>
-
-          {/* Date and Time Inputs */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="sim-date-input" className="text-[10px] font-medium text-slate-400 flex items-center justify-between">
-                <span>Date</span>
-                <span className="text-[9px] font-mono text-slate-500">Local</span>
-              </label>
-              <input
-                id="sim-date-input"
-                type="date"
-                value={dateInputVal}
-                onChange={handleDateChange}
-                aria-label="Simulation Local Date"
-                className="w-full bg-slate-900 border border-slate-800 focus:border-cyan-500/60 rounded-md px-2 py-1 text-xs text-slate-200 font-mono outline-none cursor-pointer"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="sim-time-input" className="text-[10px] font-medium text-slate-400 flex items-center justify-between">
-                <span>Time</span>
-                <span className="text-[9px] font-mono text-slate-500">Local</span>
-              </label>
-              <input
-                id="sim-time-input"
-                type="time"
-                value={timeInputVal}
-                onChange={handleTimeChange}
-                aria-label="Simulation Local Time"
-                className="w-full bg-slate-900 border border-slate-800 focus:border-cyan-500/60 rounded-md px-2 py-1 text-xs text-slate-200 font-mono outline-none cursor-pointer"
-              />
-            </div>
-          </div>
-
-          {/* Hour Scrub Slider */}
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-              <label htmlFor="sim-hour-slider">Hour Scrub</label>
-              <span className="text-amber-300 font-bold">{String(sliderHourVal).padStart(2, '0')}:00</span>
-            </div>
-            <input
-              id="sim-hour-slider"
-              type="range"
-              min="0"
-              max="23"
-              step="1"
-              value={sliderHourVal}
-              onChange={handleSliderChange}
-              aria-label="Simulation Hour Scrub Slider"
-              className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400 focus-visible:outline-none"
-            />
-            <div className="flex justify-between text-[8px] font-mono text-slate-500 px-0.5">
-              <span>00:00</span>
-              <span>06:00</span>
-              <span>12:00</span>
-              <span>18:00</span>
-              <span>23:00</span>
-            </div>
-          </div>
-
-          {/* Time of Day Presets */}
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
-              Solar Presets
+        <div className="flex flex-col items-start leading-none">
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold font-mono tracking-wider text-[11px]">
+              {formatUtcString(activeDate)}
             </span>
-            <div className="grid grid-cols-2 gap-1.5">
-              {PRESETS.map((p) => {
-                const isActive =
-                  isSimulating &&
-                  activeDate.getHours() === p.hour;
-
-                return (
-                  <button
-                    key={p.label}
-                    type="button"
-                    onClick={() => handleApplyPreset(p.hour, p.min)}
-                    aria-label={`Apply ${p.label} preset`}
-                    className={`px-2 py-1.5 rounded-lg border text-left transition-all cursor-pointer flex items-center justify-between focus-visible:outline-none ${
-                      isActive
-                        ? 'bg-amber-500/20 border-amber-500/60 text-amber-200 shadow-sm'
-                        : 'bg-slate-900/60 border-slate-800 hover:bg-slate-800/80 text-slate-300'
-                    }`}
-                  >
-                    <div className="flex flex-col">
-                      <span className="text-[11px] font-medium">{p.label}</span>
-                      <span className="text-[9px] text-slate-400 font-mono">{p.tag}</span>
-                    </div>
-                    <span className="text-xs">{p.icon}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {isSimulated && (
+              <span className="px-1 py-0.2 text-[8px] font-mono bg-amber-500 text-black font-bold rounded">
+                SIM
+              </span>
+            )}
           </div>
+          <span className="text-[9px] text-slate-400 uppercase tracking-widest mt-0.5">
+            {solarPhase}
+          </span>
+        </div>
 
-          {/* Reset Action */}
-          {isSimulating && (
-            <div className="border-t border-slate-800/80 pt-2">
+        <svg className="w-3.5 h-3.5 ml-1 text-slate-400 group-hover:text-cyan-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Expanded Chrono Instrument Console */}
+      {isOpen && (
+        <div className="absolute right-0 top-12 w-80 bg-[#020617]/95 border border-cyan-500/40 rounded-lg p-3.5 shadow-[0_0_30px_rgba(6,182,212,0.15)] backdrop-blur-2xl text-slate-200 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+          {/* Corner Bracket Accents */}
+          <div className="absolute top-1 left-1 w-2 h-2 border-t border-l border-cyan-400/80" />
+          <div className="absolute top-1 right-1 w-2 h-2 border-t border-r border-cyan-400/80" />
+          <div className="absolute bottom-1 left-1 w-2 h-2 border-b border-l border-cyan-400/80" />
+          <div className="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-cyan-400/80" />
+
+          {/* Instrument Header */}
+          <div className="flex items-center justify-between border-b border-slate-800/90 pb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-cyan-400">⏱️</span>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-100">
+                ASTRONOMICAL CHRONO
+              </h3>
+            </div>
+            {isSimulated && (
               <button
                 type="button"
-                onClick={handleResetToCurrentTime}
-                className="w-full py-1.5 px-3 bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-800/80 rounded-lg text-xs font-medium transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5 focus-visible:outline-none"
+                onClick={handleReset}
+                className="px-2 py-0.5 text-[9px] font-mono text-cyan-300 bg-cyan-950/80 border border-cyan-800 hover:bg-cyan-900 rounded cursor-pointer transition-colors"
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>Return to Real Current Time</span>
+                LIVE REALTIME
+              </button>
+            )}
+          </div>
+
+          {/* Solar Hour Scrub Dial Slider */}
+          <div className="space-y-1.5 bg-[#01040f]/80 p-2.5 rounded border border-slate-800/80">
+            <div className="flex items-center justify-between text-[10px] text-slate-300 font-mono">
+              <span className="text-cyan-400 font-semibold">SOLAR POSITION</span>
+              <span>{utcHoursDecimal.toFixed(1)} / 24.0 HRS</span>
+            </div>
+
+            <input
+              type="range"
+              min="0"
+              max="23.98"
+              step="0.1"
+              value={utcHoursDecimal}
+              onChange={(e) => handleHourChange(parseFloat(e.target.value))}
+              aria-label="Solar position hours slider"
+              className="w-full accent-cyan-400 bg-slate-900 h-1.5 rounded cursor-pointer"
+            />
+
+            <div className="flex justify-between text-[8px] text-slate-500 font-mono pt-0.5">
+              <span>00:00 (MIDNIGHT)</span>
+              <span>12:00 (NOON)</span>
+              <span>23:59</span>
+            </div>
+          </div>
+
+          {/* Solar Position Quick Presets */}
+          <div className="space-y-1">
+            <span className="text-[9px] text-cyan-500 uppercase tracking-wider block">
+              SOLAR ILLUMINATION PRESETS
+            </span>
+            <div className="grid grid-cols-4 gap-1">
+              <button
+                type="button"
+                onClick={() => handlePreset(6)}
+                className="px-1.5 py-1 bg-slate-900/80 hover:bg-cyan-950 border border-slate-800 hover:border-cyan-600 rounded text-[9px] text-slate-300 hover:text-cyan-200 transition-colors cursor-pointer"
+              >
+                🌅 SUNRISE
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePreset(12)}
+                className="px-1.5 py-1 bg-slate-900/80 hover:bg-cyan-950 border border-slate-800 hover:border-cyan-600 rounded text-[9px] text-slate-300 hover:text-cyan-200 transition-colors cursor-pointer"
+              >
+                ☀️ NOON
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePreset(18)}
+                className="px-1.5 py-1 bg-slate-900/80 hover:bg-cyan-950 border border-slate-800 hover:border-cyan-600 rounded text-[9px] text-slate-300 hover:text-cyan-200 transition-colors cursor-pointer"
+              >
+                🌇 SUNSET
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePreset(0)}
+                className="px-1.5 py-1 bg-slate-900/80 hover:bg-cyan-950 border border-slate-800 hover:border-cyan-600 rounded text-[9px] text-slate-300 hover:text-cyan-200 transition-colors cursor-pointer"
+              >
+                🌙 MIDNIGHT
               </button>
             </div>
-          )}
+          </div>
+
+          {/* Date Picker */}
+          <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+            <span className="text-[10px] text-slate-400">CALENDAR DATE:</span>
+            <input
+              type="date"
+              value={formatDateString(activeDate)}
+              onChange={(e) => handleDateInput(e.target.value)}
+              aria-label="Simulation date input"
+              className="bg-slate-900 border border-slate-800 rounded px-2 py-0.5 text-xs text-cyan-300 font-mono outline-none focus:border-cyan-500 cursor-pointer"
+            />
+          </div>
         </div>
       )}
     </div>

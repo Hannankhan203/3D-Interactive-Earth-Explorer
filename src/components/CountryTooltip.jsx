@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { getCountryDetails } from '../data/countryData';
 
 /**
- * CountryTooltip component
- * Displays a compact hover badge near the cursor when hovering over a country on the 3D Earth.
+ * CountryTooltip Component — Spatial Cursor Telemetry Badge
+ * Displays a technical hover badge near the cursor when hovering over any territory on the 3D Earth.
  */
 export default function CountryTooltip({ hoveredCountry }) {
   const [pos, setPos] = useState({ x: 0, y: 0 });
@@ -18,7 +18,7 @@ export default function CountryTooltip({ hoveredCountry }) {
 
   useEffect(() => {
     const handlePointerMove = (e) => {
-      // Do not show hover tooltips for touch devices or while dragging
+      // Hide on touch or active drag buttons
       if (e.pointerType === 'touch' || e.buttons !== 0) {
         setIsVisible(false);
         return;
@@ -44,9 +44,7 @@ export default function CountryTooltip({ hoveredCountry }) {
     };
   }, [hoveredCountry]);
 
-  if (!displayCountry) {
-    return null;
-  }
+  if (!displayCountry) return null;
 
   const details = getCountryDetails(displayCountry);
   const countryName = details?.name || displayCountry.properties?.name || 'Unknown Territory';
@@ -57,14 +55,12 @@ export default function CountryTooltip({ hoveredCountry }) {
       ? details.capital
       : null;
 
-  // Offset tooltip slightly from cursor (14px right, 14px down)
   const offset = 14;
   let left = pos.x + offset;
   let top = pos.y + offset;
 
-  // Viewport bounds checking
-  const tooltipWidth = 160;
-  const tooltipHeight = 40;
+  const tooltipWidth = 180;
+  const tooltipHeight = 44;
 
   if (typeof window !== 'undefined') {
     if (left + tooltipWidth > window.innerWidth - 8) {
@@ -81,7 +77,7 @@ export default function CountryTooltip({ hoveredCountry }) {
 
   return (
     <div
-      className={`fixed z-50 pointer-events-none transition-all duration-150 ease-out font-sans ${
+      className={`fixed z-50 pointer-events-none transition-all duration-150 ease-out font-mono ${
         isShowing ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
       }`}
       style={{
@@ -89,12 +85,19 @@ export default function CountryTooltip({ hoveredCountry }) {
         top: `${top}px`,
       }}
     >
-      <div className="px-3 py-1.5 bg-slate-950/90 text-slate-100 text-xs font-medium border border-slate-800/90 rounded-lg shadow-2xl backdrop-blur-xl flex items-center gap-2 whitespace-nowrap">
+      <div className="px-3 py-1.5 bg-[#020617]/95 text-slate-100 text-xs border border-cyan-500/40 rounded shadow-2xl backdrop-blur-xl flex items-center gap-2 whitespace-nowrap relative">
+        {/* Corner Accents */}
+        <div className="absolute top-0.5 left-0.5 w-1 h-1 border-t border-l border-cyan-400" />
+        <div className="absolute top-0.5 right-0.5 w-1 h-1 border-t border-r border-cyan-400" />
+        <div className="absolute bottom-0.5 left-0.5 w-1 h-1 border-b border-l border-cyan-400" />
+        <div className="absolute bottom-0.5 right-0.5 w-1 h-1 border-b border-r border-cyan-400" />
+
         <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0 animate-pulse" />
-        <span className="tracking-wide font-semibold text-slate-100">{countryName}</span>
+        <span className="tracking-wide font-bold font-sans text-slate-100">{countryName}</span>
+
         {capitalName && (
-          <span className="text-slate-400 text-[11px] font-normal border-l border-slate-800/80 pl-2 ml-0.5">
-            Capital: <span className="text-cyan-200/90 font-medium">{capitalName}</span>
+          <span className="text-slate-400 text-[10px] font-normal border-l border-slate-800 pl-2 ml-0.5">
+            CAPITAL: <span className="text-cyan-300 font-medium font-sans">{capitalName}</span>
           </span>
         )}
       </div>

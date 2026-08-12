@@ -3,18 +3,19 @@ import { getCountryDetails } from '../data/countryData';
 import { getNeighborFeatures } from '../utils/countryUtils';
 
 /**
- * Professional Geographic Information Panel
- * Features drag-to-move header and resizable bottom-right corner.
- * Displays capital, population, land area, currency, languages, overview,
- * clickable neighbors, Wikipedia link, and share action.
+ * Geographic Dossier & Inspector Surface
+ * Complete UI rebuild: A specialized digital inspector viewport presenting
+ * complete geographic telemetry, capital coordinates, population, area,
+ * currency, languages, overview, neighboring borders, Wikipedia link, and share action.
+ * Features drag-to-move header and resizable corner handle with touch event isolation.
  */
 export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onClose }) {
   const [imgError, setImgError] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Explicit pixel-based positioning and sizing state
+  // Position and Size state
   const [position, setPosition] = useState(null); // { left: number, top: number }
-  const [size, setSize] = useState({ width: 360, height: 420 }); // Default dimensions
+  const [size, setSize] = useState({ width: 380, height: 440 });
 
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -39,7 +40,6 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
     }, 150);
   };
 
-  // Dragging ref tracker
   const dragRef = useRef({
     startMouseX: 0,
     startMouseY: 0,
@@ -47,7 +47,6 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
     startTop: 0,
   });
 
-  // Resizing ref tracker
   const resizeRef = useRef({
     startMouseX: 0,
     startMouseY: 0,
@@ -55,7 +54,6 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
     startHeight: 0,
   });
 
-  // Reset img error on country selection change
   useEffect(() => {
     setImgError(false);
     setCopied(false);
@@ -69,23 +67,20 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
       const containerWidth = window.innerWidth;
       const containerHeight = window.innerHeight;
 
-      // Fit panel dimensions to smaller viewports automatically
-      const targetW = Math.min(size.width || 360, containerWidth - 16);
-      const targetH = Math.min(size.height || 420, containerHeight - 80);
+      const targetW = Math.min(size.width || 380, containerWidth - 16);
+      const targetH = Math.min(size.height || 440, containerHeight - 80);
 
       const panelW = Math.max(Math.min(280, containerWidth - 16), targetW);
       const panelH = Math.max(Math.min(220, containerHeight - 80), targetH);
 
-      // Default initial position (top right for desktop, centered for mobile)
       let defaultLeft = Math.max(16, containerWidth - panelW - 24);
-      let defaultTop = 72;
+      let defaultTop = 80;
 
       if (containerWidth < 640) {
         defaultLeft = Math.max(8, (containerWidth - panelW) / 2);
-        defaultTop = 64;
+        defaultTop = 72;
       }
 
-      // Clamp coordinates strictly within viewport bounds with 8px margin
       const safeMinX = 8;
       const safeMaxX = Math.max(safeMinX, containerWidth - panelW - 8);
       const safeMinY = 8;
@@ -145,14 +140,14 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
   const displayCurrency = formatVal(details?.currency, 'Data unavailable');
   const displayLanguage = formatVal(details?.language, 'Data unavailable');
 
-  // Handle Share button
+  // Handle Share URL
   const handleShare = (e) => {
     e.stopPropagation();
     const shareUrl = `${window.location.origin}${window.location.pathname}?country=${encodeURIComponent(displayName)}`;
     if (navigator.share) {
       navigator.share({
         title: `${displayName} — Earth Explorer`,
-        text: `Explore ${displayName} on Earth Explorer 3D Interactive Globe`,
+        text: `Explore ${displayName} on Earth Explorer 3D Globe`,
         url: shareUrl,
       }).catch(() => {
         copyToClipboard(shareUrl);
@@ -178,7 +173,7 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
     const clientY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
 
     const currentLeft = position?.left ?? 16;
-    const currentTop = position?.top ?? 72;
+    const currentTop = position?.top ?? 80;
 
     dragRef.current = {
       startMouseX: clientX,
@@ -202,8 +197,8 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
       const containerW = window.innerWidth;
       const containerH = window.innerHeight;
 
-      const panelW = panelRef.current ? panelRef.current.offsetWidth : (size.width || 360);
-      const panelH = panelRef.current ? panelRef.current.offsetHeight : (size.height || 420);
+      const panelW = panelRef.current ? panelRef.current.offsetWidth : (size.width || 380);
+      const panelH = panelRef.current ? panelRef.current.offsetHeight : (size.height || 440);
 
       const minX = 8;
       const maxX = Math.max(minX, containerW - panelW - 8);
@@ -241,8 +236,8 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
     const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
     const clientY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
 
-    const currentW = panelRef.current ? panelRef.current.offsetWidth : (size.width || 360);
-    const currentH = panelRef.current ? panelRef.current.offsetHeight : (size.height || 420);
+    const currentW = panelRef.current ? panelRef.current.offsetWidth : (size.width || 380);
+    const currentH = panelRef.current ? panelRef.current.offsetHeight : (size.height || 440);
 
     resizeRef.current = {
       startMouseX: clientX,
@@ -264,7 +259,7 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
       const deltaY = curY - resizeRef.current.startMouseY;
 
       const currentLeft = position?.left ?? 16;
-      const currentTop = position?.top ?? 72;
+      const currentTop = position?.top ?? 80;
 
       const minW = 280;
       const minH = 220;
@@ -280,22 +275,22 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
     const onResizeUp = (upEvent) => {
       upEvent.stopPropagation();
       setIsResizing(false);
-      window.removeEventListener('pointermove', onResizeMove);
+      window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onResizeUp);
       window.removeEventListener('pointercancel', onResizeUp);
       window.removeEventListener('touchmove', onResizeMove);
       window.removeEventListener('touchend', onResizeUp);
     };
 
-    window.addEventListener('pointermove', onResizeMove, { passive: false });
-    window.addEventListener('pointerup', onResizeUp);
-    window.addEventListener('pointercancel', onResizeUp);
-    window.addEventListener('touchmove', onResizeMove, { passive: false });
-    window.addEventListener('touchend', onResizeUp);
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+    window.addEventListener('touchmove', onPointerMove, { passive: false });
+    window.addEventListener('touchend', onPointerUp);
   };
 
   const currentLeft = position?.left ?? 16;
-  const currentTop = position?.top ?? 72;
+  const currentTop = position?.top ?? 80;
 
   return (
     <div
@@ -309,38 +304,32 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
         top: `${currentTop}px`,
         width: `${size.width}px`,
         height: `${size.height}px`,
-        zIndex: 35,
+        zIndex: 45,
       }}
-      className={`bg-slate-950/90 backdrop-blur-xl border border-slate-800/90 rounded-xl p-4 shadow-2xl text-slate-200 flex flex-col relative overflow-hidden transition-all duration-150 ease-out font-sans ${
+      className={`bg-[#020617]/95 border border-cyan-500/30 rounded-lg p-3.5 shadow-[0_0_35px_rgba(2,132,199,0.2)] text-slate-200 flex flex-col relative overflow-hidden transition-all duration-150 ease-out font-mono ${
         isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
       } ${
-        isDragging || isResizing ? 'select-none border-cyan-500/50 !transition-none' : ''
+        isDragging || isResizing ? 'select-none border-cyan-400 !transition-none' : ''
       }`}
     >
-      {/* Panel Header */}
+      {/* Corner Bracket Accents */}
+      <div className="absolute top-1 left-1 w-2.5 h-2.5 border-t border-l border-cyan-400/80 pointer-events-none" />
+      <div className="absolute top-1 right-1 w-2.5 h-2.5 border-t border-r border-cyan-400/80 pointer-events-none" />
+      <div className="absolute bottom-1 left-1 w-2.5 h-2.5 border-b border-l border-cyan-400/80 pointer-events-none" />
+      <div className="absolute bottom-1 right-1 w-2.5 h-2.5 border-b border-r border-cyan-400/80 pointer-events-none" />
+
+      {/* Inspector Header */}
       <div
         onPointerDown={handleHeaderPointerDown}
         onTouchStart={handleHeaderPointerDown}
-        className={`flex items-center justify-between pb-3 border-b border-slate-800/80 gap-2 select-none touch-none shrink-0 ${
+        className={`flex items-center justify-between pb-2.5 border-b border-cyan-900/40 gap-2 select-none touch-none shrink-0 ${
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
-        title="Drag header to move panel"
+        title="Drag header to position inspector"
       >
-        <div className="flex items-center gap-2.5 overflow-hidden pointer-events-none min-w-0">
-          {/* Drag Handle Grip Icon */}
-          <div className="text-slate-600 flex items-center shrink-0" aria-hidden="true">
-            <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
-              <circle cx="5" cy="4" r="1.2" />
-              <circle cx="11" cy="4" r="1.2" />
-              <circle cx="5" cy="8" r="1.2" />
-              <circle cx="11" cy="8" r="1.2" />
-              <circle cx="5" cy="12" r="1.2" />
-              <circle cx="11" cy="12" r="1.2" />
-            </svg>
-          </div>
-
+        <div className="flex items-center gap-2 overflow-hidden pointer-events-none min-w-0">
           {/* Flag */}
-          <div className="w-8 h-5.5 rounded border border-slate-800 bg-slate-900 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
+          <div className="w-7 h-5 rounded-[2px] border border-cyan-800/80 bg-slate-900 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
             {details?.flagUrl && !imgError ? (
               <img
                 src={details.flagUrl}
@@ -354,33 +343,37 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
             )}
           </div>
 
-          {/* Title & Official Name */}
           <div className="flex flex-col min-w-0">
-            <h2 className="text-sm font-bold text-slate-100 tracking-wide truncate leading-snug">
+            <div className="flex items-center gap-1.5 leading-none">
+              <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">
+                DOSSIER
+              </span>
+              {details?.iso2 && (
+                <span className="text-[9px] px-1 bg-cyan-950 text-cyan-300 border border-cyan-800 rounded">
+                  {details.iso2}
+                </span>
+              )}
+            </div>
+            <h2 className="text-xs font-bold text-slate-100 truncate tracking-wide font-sans mt-0.5">
               {displayName}
             </h2>
-            <p className="text-[10px] text-slate-400 font-mono truncate">
-              {details?.officialName && details.officialName !== displayName
-                ? details.officialName
-                : (displayCapital !== 'Data unavailable' ? displayCapital : displayContinent)}
-            </p>
           </div>
         </div>
 
-        {/* Action Controls: Share & Close */}
+        {/* Action Controls */}
         <div className="flex items-center gap-1 shrink-0">
-          {/* Share Button */}
+          {/* Share */}
           <button
             onPointerDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
             onClick={handleShare}
-            className="p-1.5 text-slate-400 hover:text-cyan-400 transition-colors rounded hover:bg-slate-900/80 cursor-pointer flex items-center gap-1 text-xs focus-visible:outline-none"
-            title="Share country URL"
-            aria-label="Share country URL"
+            className="p-1 text-slate-400 hover:text-cyan-300 transition-colors rounded hover:bg-slate-900/80 cursor-pointer flex items-center gap-1 text-[10px] focus-visible:outline-none"
+            title="Share territory URL"
+            aria-label="Share territory URL"
           >
             {copied ? (
-              <span className="text-[10px] font-mono text-emerald-400 px-1.5 py-0.5 bg-emerald-950/80 rounded border border-emerald-800/80">
-                Copied!
+              <span className="text-[9px] font-mono text-emerald-400 px-1 py-0.2 bg-emerald-950 rounded border border-emerald-800">
+                COPIED
               </span>
             ) : (
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -389,113 +382,101 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
             )}
           </button>
 
-          {/* Close Button */}
+          {/* Close */}
           <button
             onPointerDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
             onClick={handleClose}
-            className="p-1.5 text-slate-400 hover:text-slate-100 transition-colors rounded hover:bg-slate-900/80 cursor-pointer text-xs focus-visible:outline-none"
-            title="Close panel"
-            aria-label="Close panel"
+            className="p-1 text-slate-400 hover:text-white transition-colors rounded hover:bg-slate-900 text-xs focus-visible:outline-none"
+            title="Close dossier"
+            aria-label="Close dossier"
           >
             ✕
           </button>
         </div>
       </div>
 
-      {/* Structured Content Area */}
-      <div className="flex-1 overflow-y-auto mt-2.5 pr-1 text-xs space-y-2.5 font-sans custom-scrollbar">
-        {/* Key Metrics Grid */}
-        <div className="grid grid-cols-2 gap-2 bg-slate-900/50 border border-slate-800/80 rounded-lg p-2.5">
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto mt-2 pr-1 text-xs space-y-2 custom-scrollbar font-mono">
+        {/* Technical Data Grid */}
+        <div className="grid grid-cols-2 gap-1.5 bg-[#01040f]/80 border border-slate-800/80 rounded p-2 text-[10px]">
           {/* Capital */}
           <div className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <span>🏛️</span> Capital
-            </span>
-            <span className="text-slate-200 font-semibold truncate text-[11px]">
+            <span className="text-[9px] text-cyan-500 uppercase tracking-wider">CAPITAL CITY</span>
+            <span className="text-slate-200 font-semibold truncate text-[11px] font-sans">
               {displayCapital}
             </span>
             {details?.capitalLat !== undefined && details?.capitalLon !== undefined && !isNaN(details.capitalLat) && details.capitalLat !== 0 && (
-              <span className="text-[9px] text-slate-400 font-mono truncate">
-                {Math.abs(details.capitalLat).toFixed(1)}°{details.capitalLat >= 0 ? 'N' : 'S'}, {Math.abs(details.capitalLon).toFixed(1)}°{details.capitalLon >= 0 ? 'E' : 'W'}
+              <span className="text-[9px] text-slate-500 font-mono">
+                {Math.abs(details.capitalLat).toFixed(2)}°{details.capitalLat >= 0 ? 'N' : 'S'}, {Math.abs(details.capitalLon).toFixed(2)}°{details.capitalLon >= 0 ? 'E' : 'W'}
               </span>
             )}
           </div>
 
-          {/* Region / Continent */}
+          {/* Region */}
           <div className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <span>🌐</span> Region
-            </span>
-            <span className="text-slate-200 font-semibold truncate text-[11px]">
+            <span className="text-[9px] text-cyan-500 uppercase tracking-wider">REGION</span>
+            <span className="text-slate-200 font-semibold truncate text-[11px] font-sans">
               {displayRegion}
             </span>
-            <span className="text-[9px] text-slate-400 font-mono truncate">
+            <span className="text-[9px] text-slate-500 font-mono">
               {displayContinent}
             </span>
           </div>
 
           {/* Population */}
           <div className="flex flex-col gap-0.5 min-w-0 pt-1 border-t border-slate-800/60">
-            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <span>👥</span> Population
-            </span>
-            <span className="text-slate-100 font-mono font-semibold text-[11px] truncate">
+            <span className="text-[9px] text-cyan-500 uppercase tracking-wider">POPULATION</span>
+            <span className="text-slate-200 font-semibold text-[11px] truncate">
               {displayPopulation}
             </span>
           </div>
 
           {/* Area */}
           <div className="flex flex-col gap-0.5 min-w-0 pt-1 border-t border-slate-800/60">
-            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <span>📐</span> Area
-            </span>
-            <span className="text-slate-100 font-mono font-semibold text-[11px] truncate">
+            <span className="text-[9px] text-cyan-500 uppercase tracking-wider">SURFACE AREA</span>
+            <span className="text-slate-200 font-semibold text-[11px] truncate">
               {displayArea}
             </span>
           </div>
         </div>
 
         {/* Currency & Language Row */}
-        <div className="grid grid-cols-2 gap-2 bg-slate-900/50 border border-slate-800/80 rounded-lg p-2.5">
+        <div className="grid grid-cols-2 gap-1.5 bg-[#01040f]/80 border border-slate-800/80 rounded p-2 text-[10px]">
           <div className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
-              Currency
-            </span>
-            <span className="text-slate-200 font-semibold text-[11px] truncate">
+            <span className="text-[9px] text-cyan-500 uppercase tracking-wider">CURRENCY</span>
+            <span className="text-slate-200 font-semibold text-[10px] truncate font-sans">
               {displayCurrency}
             </span>
           </div>
 
           <div className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
-              Language
-            </span>
-            <span className="text-slate-200 font-semibold text-[11px] truncate">
+            <span className="text-[9px] text-cyan-500 uppercase tracking-wider">LANGUAGE</span>
+            <span className="text-slate-200 font-semibold text-[10px] truncate font-sans">
               {displayLanguage}
             </span>
           </div>
         </div>
 
-        {/* Overview Description if available */}
+        {/* Overview */}
         {details?.overview && (
-          <div className="p-2.5 bg-slate-900/40 border border-slate-800/80 rounded-lg space-y-1">
-            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider block">
-              Overview
+          <div className="p-2 bg-[#01040f]/60 border border-slate-800/80 rounded space-y-1">
+            <span className="text-[9px] text-cyan-500 uppercase tracking-wider block">
+              GEOGRAPHIC OVERVIEW
             </span>
-            <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+            <p className="text-[10px] text-slate-300 leading-relaxed font-sans">
               {details.overview}
             </p>
           </div>
         )}
 
-        {/* Neighboring Countries */}
+        {/* Neighboring Borders */}
         {(() => {
           const neighbors = getNeighborFeatures(selectedFeature);
           return (
-            <div className="flex flex-col gap-1.5 pt-1 border-t border-slate-800/80">
-              <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">
-                Neighboring Borders ({neighbors.length})
+            <div className="flex flex-col gap-1 pt-1 border-t border-slate-800/80">
+              <span className="text-[9px] text-cyan-500 uppercase tracking-wider">
+                ADJACENT BORDERS ({neighbors.length})
               </span>
               {neighbors.length > 0 ? (
                 <div className="flex flex-wrap gap-1">
@@ -512,9 +493,8 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
                             onSelectCountry(nFeat);
                           }
                         }}
-                        className="px-2 py-1 bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded text-[10px] text-cyan-300/90 hover:text-cyan-200 font-medium cursor-pointer transition-colors flex items-center focus-visible:outline-none"
+                        className="px-1.5 py-0.5 bg-cyan-950/60 hover:bg-cyan-900 border border-cyan-800/80 rounded text-[9px] text-cyan-300 font-medium cursor-pointer transition-colors flex items-center focus-visible:outline-none"
                         title={`Fly camera to ${nName}`}
-                        aria-label={`Select ${nName}`}
                       >
                         {nName}
                       </button>
@@ -522,24 +502,24 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
                   })}
                 </div>
               ) : (
-                <span className="text-slate-400 text-[10px] italic font-sans">
-                  None (Island nation or territory)
+                <span className="text-slate-500 text-[10px] italic font-sans">
+                  No adjacent land borders (Island nation/territory)
                 </span>
               )}
             </div>
           );
         })()}
 
-        {/* External Link */}
-        <div className="pt-2 border-t border-slate-800/80 flex justify-end">
+        {/* Wikipedia Link */}
+        <div className="pt-1.5 border-t border-slate-800/80 flex justify-end">
           <a
             href={`https://en.wikipedia.org/wiki/${encodeURIComponent(displayName)}`}
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1 text-[10px] font-medium text-cyan-400 hover:text-cyan-300 transition-colors"
+            className="inline-flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors"
           >
-            <span>Learn more on Wikipedia</span>
+            <span>WIKIPEDIA REFERENCE</span>
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
@@ -551,11 +531,11 @@ export default function CountryInfoPanel({ selectedFeature, onSelectCountry, onC
       <div
         onPointerDown={handleResizePointerDown}
         onTouchStart={handleResizePointerDown}
-        className="absolute bottom-0 right-0 w-6 h-6 flex items-end justify-end p-0.5 cursor-nwse-resize select-none touch-none text-slate-600 hover:text-slate-400 transition-colors z-20"
-        title="Drag corner to resize panel"
+        className="absolute bottom-0 right-0 w-5 h-5 flex items-end justify-end p-0.5 cursor-nwse-resize select-none touch-none text-cyan-600 hover:text-cyan-400 transition-colors z-20"
+        title="Resize dossier"
       >
-        <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M14 14H11V12H14V14ZM14 10H8V8H14V10ZM14 6H5V4H14V6Z" opacity="0.6" />
+        <svg className="w-3 h-3" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M14 14H11V12H14V14ZM14 10H8V8H14V10ZM14 6H5V4H14V6Z" opacity="0.8" />
         </svg>
       </div>
     </div>
